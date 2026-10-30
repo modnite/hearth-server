@@ -80,7 +80,7 @@ To move to another machine: install the same way, stop the server, restore the f
 git pull && docker compose up -d --build
 ```
 
-Pin what you run: use a release tag (`git checkout v1.0.0`) and set `LIVEKIT_TAG`. Published images, when you want to skip building, are `ghcr.io/modnite/hearth-server:<version>`; set `HEARTH_IMAGE` to use one.
+Pin what you run: use a release tag (`git checkout v1.0.1`) and set `LIVEKIT_TAG`. Published images, when you want to skip building, are `ghcr.io/modnite/hearth-server:<version>`; set `HEARTH_IMAGE` to use one.
 
 ## 7. Security notes
 
@@ -95,7 +95,7 @@ Pin what you run: use a release tag (`git checkout v1.0.0`) and set `LIVEKIT_TAG
 
 | Symptom | Check |
 |---|---|
-| Panel says calls "set up, not reachable" | the server cannot reach `LIVEKIT_INTERNAL_URL`; with the `calls` profile it is `http://host.docker.internal:7880` |
+| Panel says calls "set up, not reachable" | the server cannot reach `LIVEKIT_INTERNAL_URL`; the stack sets it to `http://host.docker.internal:7880`, which needs LiveKit running |
 | Clients cannot connect on a LAN | the clients need the machine's address, not `localhost`; use the connect address on the Overview tab |
 | A client works over HTTP but not camera or microphone | camera and microphone need HTTPS (see section 2) |
 | Lost every administrator password | `docker compose exec hearth node scripts/admin-cli.mjs reset-password <username>` prints a temporary one; `make-admin <username>` promotes an account; `list` shows who exists |

@@ -11,7 +11,7 @@ This guide covers what a client needs to know. The server's exact route list is 
 ```json
 {
   "software": "hearth-server",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "apiVersion": 1,
   "name": "Hearth",
   "motd": "",
@@ -60,6 +60,13 @@ An account is addressed by `id` everywhere. Usernames can change.
 
 - `GET /api/rooms` lists your chats (direct messages and groups) with unread counts and `archived`.
 - `POST /api/rooms` `{ "name", "topic"?, "memberIds": [], "encrypted"? }` makes a group. `POST /api/users/:id/dm` opens or returns a direct chat.
+- Group management:
+  - `PATCH /api/rooms/:id` `{ "name"?, "topic"? }` renames a group. Any member can. Direct chats cannot be renamed.
+  - `POST /api/rooms/:id/members` `{ "userIds": [] }` adds people. Any member can add their own contacts. The answer lists `added` and `skipped`.
+  - `DELETE /api/rooms/:id/members/:userId` removes someone. Only the person who made the group can.
+  - `POST /api/rooms/:id/leave` leaves. If the maker leaves, the group passes to whoever has been in it longest. An empty group is deleted.
+  - `POST` and `DELETE /api/rooms/:id/avatar` set and remove the group picture.
+  - Each change sends `room.updated` to members, `room.removed` to the person removed, and a `room.event` line with a plain-text description.
 - `GET /api/rooms/:id/messages?before=<ms>&limit=<n ≤ 200>` returns `{ "messages": [...] }`, oldest first. Page back with `before` set to the oldest `createdAt` you have.
 - `POST /api/rooms/:id/messages` `{ "body", "replyTo"? }` (up to 16000 characters) returns `{ "message": {...} }`.
 - `PATCH` and `DELETE /api/messages/:id`, `POST /api/messages/:id/reactions`, `/pin`, `/forward`.
