@@ -11,14 +11,14 @@ This guide covers what a client needs to know. The server's exact route list is 
 ```json
 {
   "software": "hearth-server",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "apiVersion": 1,
   "name": "Hearth",
   "motd": "",
   "registration": "invite",
   "houseKey": false,
   "setupNeeded": false,
-  "features": { "calls": true, "push": false, "backups": true, "browser": true, "twoStep": true, "friends": true },
+  "features": { "calls": true, "push": false, "backups": true, "browser": true, "twoStep": true, "friends": true, "crashReports": true },
   "limits": { "backupQuotaMb": 4096, "backupMaxFileMb": 1024 }
 }
 ```
@@ -126,15 +126,42 @@ If `features.backups` is true, a client may store sealed backup files for the si
 
 A good client offers this next to other places (a folder, WebDAV, S3, FTP, SFTP) and, on a fresh install, offers to restore from it right after the first sign-in. Ember does exactly that.
 
-## 9. Errors
+## 9. Crash reports
+
+If `features.crashReports` is true, a client may send its crashes. No sign-in is needed (a crash can happen before one), but a signed-in session is attached to the report so the administrator sees who it came from.
+
+`POST /api/crash-reports`
+
+```json
+{
+  "source": "ember",
+  "kind": "crash",
+  "appVersion": "1.1.0",
+  "platform": "Android 15 (API 35)",
+  "device": "Samsung SM-S911B",
+  "message": "java.lang.IllegalStateException: Room not found",
+  "stack": "java.lang.IllegalStateException: Room not found\n\tat ...",
+  "at": 1793399387947,
+  "context": { "thread": "main" }
+}
+```
+
+- `source` (a short name such as `ember` or `web`) and `message` are required. `kind` is `crash`, `error` or `anr`.
+- Limits: message 2000 characters, stack 24000, context 4000 as JSON (left out if larger). The answer is `{ "ok": true, "id": "..." }`.
+- `400` says what is wrong, `403` means the server does not collect reports (drop the report), `429` has `retry-after` (keep it and try later).
+- Reports with the same exception type, message shape and top three stack frames form one group. Numbers and file positions do not count, so a rebuild keeps the group.
+
+Administrators read them under `GET /api/admin/crashes?status=open|resolved|all`, `GET /api/admin/crashes/:signature`, and change them with `POST /api/admin/crashes/:signature/resolve` `{ "resolved": true, "note"? }` and `DELETE /api/admin/crashes/:signature`.
+
+## 10. Errors
 
 Errors are JSON, `{ "error": "plain words a person can read" }`, with a fitting status: `400` bad input, `401` not signed in, `403` not allowed, `404`, `409` conflict, `413`, `429` slow down (`retry-after` in seconds), `507` out of space. Show the message as it is.
 
-## 10. Administrators
+## 11. Administrators
 
 `/api/admin/*` is the administrator API behind the admin panel (`GET /admin`). It needs a session of an account with `admin: true` and refuses requests whose `Origin` is another site. A client does not need it, but a management tool can use it.
 
-## 11. Be a good citizen
+## 12. Be a good citizen
 
 - Send your own `User-Agent`.
 - Keep one WebSocket per device, not one per chat.

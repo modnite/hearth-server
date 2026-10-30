@@ -25,7 +25,7 @@ const kv = (rows) => h('div', { class: 'kv' }, rows.flatMap(([k, v]) => [h('div'
 export async function overview(ctx) {
   const [s, info] = await Promise.all([api('/api/admin/status'), api('/api/server/info')]);
   ctx.state.info = info;
-  ctx.setCounts({ users: s.counts.users, invites: s.counts.openInvites });
+  ctx.setCounts({ users: s.counts.users, invites: s.counts.openInvites, crashes: s.counts.openCrashes });
   remember(s);
   const origin = location.origin;
 

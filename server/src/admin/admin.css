@@ -464,3 +464,12 @@ textarea.input { height: auto; min-height: 60px; padding: 8px 12px; resize: vert
 }
 
 .spark .line, .spark .grid { vector-effect: non-scaling-stroke; }
+
+.crash-report { margin: var(--s3) 0 0; }
+.crash-report .codeblock pre { max-height: 220px; }
+.sheet.wide { width: min(760px, calc(100vw - 24px)); }
+.crashbody { max-height: min(62vh, 600px); overflow: auto; }
+.toolbar select.input { width: auto; min-width: 150px; }
+@media (max-width: 640px) {
+  table.stack td:first-child, table.stack td:first-child > span { text-align: left; }
+}

@@ -1,6 +1,7 @@
 // The Hearth server administration page: sign-in, the shell (header bar and menu) and the router. Plain ES modules, no build step,
 // no outside requests.
 import { activity, backups, build, invites } from './v-more.js';
+import { crashes } from './v-crashes.js';
 import { overview } from './v-overview.js';
 import { people } from './v-people.js';
 import { settings } from './v-settings.js';
@@ -10,7 +11,7 @@ import { api, button, h, skeleton, theme } from './ui.js';
 theme.apply();
 
 const app = document.getElementById('app');
-const state = { info: null, me: null, tab: 'overview', counts: { users: null, invites: null } };
+const state = { info: null, me: null, tab: 'overview', counts: { users: null, invites: null, crashes: null } };
 
 const TABS = [
   { id: 'overview', ico: 'overview', label: 'Overview', group: 'Server', view: overview },
@@ -18,6 +19,7 @@ const TABS = [
   { id: 'people', ico: 'people', label: 'People', group: 'People', view: people, count: 'users' },
   { id: 'invites', ico: 'invites', label: 'Invites', group: 'People', view: invites, count: 'invites' },
   { id: 'backups', ico: 'backups', label: 'Backups', group: 'Operate', view: backups },
+  { id: 'crashes', ico: 'bug', label: 'Crashes', group: 'Operate', view: crashes, count: 'crashes' },
   { id: 'activity', ico: 'activity', label: 'Activity', group: 'Operate', view: activity },
   { id: 'build', ico: 'code', label: 'For client builders', group: 'Operate', view: build },
 ];

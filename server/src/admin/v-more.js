@@ -62,6 +62,7 @@ const WHAT = {
   'reset-password': (l) => `Reset the password of ${l.detail}`, 'remove-user': (l) => `Removed the account ${l.detail}`,
   invite: () => 'Made an invite code', 'revoke-invite': () => 'Revoked an invite code',
   'delete-backup': (l) => `Deleted the backup ${l.detail}`, restart: () => 'Restarted the server',
+  'resolve-crash': () => 'Marked a crash as fixed', 'reopen-crash': () => 'Reopened a crash', 'delete-crash': () => 'Deleted a crash',
 };
 const valueOf = (l) => (l.action === 'setting' && l.detail.includes(' = ') ? l.detail.split(' = ').slice(1).join(' = ') : '');
 
@@ -77,10 +78,10 @@ export async function activity() {
 }
 
 // ---------------------------------------------------------------------------------------------- for client builders
-const CAP = { calls: 'Voice and video', push: 'Push notifications', backups: 'Backups kept here', browser: 'Browser proxy', twoStep: 'Two-step sign-in', friends: 'Friends and blocking' };
+const CAP = { calls: 'Voice and video', push: 'Push notifications', backups: 'Backups kept here', browser: 'Browser proxy', twoStep: 'Two-step sign-in', friends: 'Friends and blocking', crashReports: 'Crash reports' };
 const AREAS = [
   ['Accounts and sign-in', /^\/api\/(auth|admin\/setup)/], ['Friends and blocks', /^\/api\/(contacts|friend-code|blocks|users)/], ['Chats and messages', /^\/api\/(rooms|messages|search|attachments|avatars|room-avatars|wallpapers|preview)/],
-  ['Encryption', /^\/api\/e2ee/], ['Notifications', /^\/api\/(push|native)/], ['Backups', /^\/api\/backup/], ['Invites', /^\/api\/invites/], ['Administration', /^\/api\/admin/], ['Server', /^\/api\/(server|health)/],
+  ['Encryption', /^\/api\/e2ee/], ['Notifications', /^\/api\/(push|native)/], ['Backups', /^\/api\/backup/], ['Crash reports', /^\/api\/crash-reports/], ['Invites', /^\/api\/invites/], ['Administration', /^\/api\/admin/], ['Server', /^\/api\/(server|health)/],
 ];
 
 export async function build() {

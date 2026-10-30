@@ -266,6 +266,28 @@ await check('group chats: add people, remove people, rename, hand over when the 
   assert.equal((await bob.call(`/api/rooms/${room.id}/members/${carolId}`, { method: 'DELETE' })).status, 200);
 });
 
+await check('crash reports: clients send them, the administrator reviews, fixes and deletes them', async () => {
+  const report = { source: 'ember', kind: 'crash', appVersion: '1.0.0', platform: 'Android 15', device: 'Pixel', message: 'java.lang.IllegalStateException: smoke 7', stack: 'java.lang.IllegalStateException: smoke 7\n\tat org.hearth.ember.A.b(A.kt:1)\n\tat org.hearth.ember.C.d(C.kt:2)' };
+  assert.equal((await anon.call('/api/server/info')).json.features.crashReports, true);
+  assert.equal((await anon.call('/api/crash-reports', { method: 'POST', body: report })).status, 200);
+  assert.equal((await anon.call('/api/crash-reports', { method: 'POST', body: { source: 'ember' } })).status, 400);
+  assert.equal((await alice.call('/api/crash-reports', { method: 'POST', body: { ...report, message: 'java.lang.IllegalStateException: smoke 9' } })).status, 200);
+  assert.equal((await anon.call('/api/admin/crashes')).status, 401);
+  assert.equal((await alice.call('/api/admin/crashes')).status, 403);
+  const list = (await admin.call('/api/admin/crashes')).json;
+  assert.equal(list.groups.length, 1);
+  assert.equal(list.groups[0].count, 2);
+  assert.equal(list.groups[0].people, 1);
+  const sig = list.groups[0].signature;
+  assert.equal((await admin.call(`/api/admin/crashes/${sig}`)).json.reports.some((r) => r.user === 'alice'), true);
+  assert.equal((await admin.call(`/api/admin/crashes/${sig}/resolve`, { method: 'POST', body: { resolved: true, note: 'smoke' } })).status, 200);
+  assert.equal((await admin.call('/api/admin/crashes')).json.groups.length, 0);
+  await anon.call('/api/crash-reports', { method: 'POST', body: report });
+  assert.equal((await admin.call('/api/admin/crashes')).json.groups.length, 1, 'a new crash reopens a fixed one');
+  assert.equal((await admin.call(`/api/admin/crashes/${sig}`, { method: 'DELETE' })).status, 200);
+  assert.equal((await admin.call(`/api/admin/crashes/${sig}`)).status, 404);
+});
+
 await check('removing a person deletes the account', async () => {
   const b = (await admin.call('/api/admin/users')).json.users.find((u) => u.username === 'bob');
   assert.equal((await admin.call(`/api/admin/users/${b.id}`, { method: 'DELETE' })).status, 200);

@@ -1,6 +1,6 @@
 # Hearth server
 
-Self-hosted messaging server for a family, a friend group or a team. Accounts, direct and group chats, voice and video calls, file sharing, end-to-end encrypted rooms, backups kept per person, and a web admin panel. Current version: 1.0.1.
+Self-hosted messaging server for a family, a friend group or a team. Accounts, direct and group chats, voice and video calls, file sharing, end-to-end encrypted rooms, backups kept per person, and a web admin panel. Current version: 1.1.0.
 
 The repository is the server only. Clients use the documented HTTP and WebSocket API ([docs/API.md](docs/API.md)):
 
@@ -18,6 +18,10 @@ The repository is the server only. Clients use the documented HTTP and WebSocket
 <img src="docs/screenshots/phone-overview.png" alt="Overview on a phone" width="32%">
 <img src="docs/screenshots/phone-people.png" alt="People on a phone" width="32%">
 <img src="docs/screenshots/phone-settings.png" alt="Settings on a phone" width="32%">
+</p>
+<p>
+<img src="docs/screenshots/crashes.png" alt="Crashes" width="49%">
+<img src="docs/screenshots/crash-detail.png" alt="One crash with its reports" width="49%">
 </p>
 
 ## Run it
@@ -68,6 +72,7 @@ Served at `/admin` by the server itself. Plain ES modules served as they are, li
 | People | Make or remove administrators, switch accounts off and on, reset a password, remove an account |
 | Invites | Make and revoke invite codes |
 | Backups | Who keeps backups here, how much, delete one |
+| Crashes | Crash reports from Ember and the web app, grouped by cause, with stacks and device details. Mark one fixed (a new report reopens it), add a note, copy a report, delete |
 | Activity | What administrators did |
 | For client builders | Server capabilities and the full route list |
 
@@ -82,6 +87,7 @@ Settings are saved to `config.json` in the data folder. An environment variable 
 - **Notifications:** web push, and a long-poll channel for native apps without Google services.
 - **Backups:** sealed by the client, stored per person under a quota you set. The server cannot read them.
 - **Browser proxy:** optional built-in page fetcher for signed-in people.
+- **Crash reports:** clients send their crash logs to `POST /api/crash-reports` and an administrator reviews them under Crashes. Reports are grouped by exception type and top frames, rate limited per address, and deleted after 90 days (Settings, Crash reports). Switch collecting off with the same setting or `CRASH_REPORTS=off`.
 
 ## Data
 
@@ -123,6 +129,7 @@ Or set `HEARTH_IMAGE` to a published image tag. The database migrates itself. Co
 | 1.0.0 | Group management (add, remove, rename, hand over) | Done |
 | 1.0.0 | One-file stack with LiveKit and optional Caddy | Done |
 | 1.0.1 | Admin panel refined: even grids, phone layout as cards, dismiss button | Done |
+| 1.1.0 | Crash reports: ingest route, Crashes page, retention, settings | Done |
 
 ### Open items
 
@@ -132,6 +139,8 @@ Or set `HEARTH_IMAGE` to a published image tag. The database migrates itself. Co
 - [ ] Graph history kept by the server (the Overview graphs only cover the time the page has been open)
 - [ ] Group add, remove and rename in the Hearth web client (Ember has them)
 - [ ] GitHub release entries for tags (images are published, the release pages are not written)
+- [ ] Crash reports from a second real phone (Ember on the emulator is verified end to end)
+- [ ] A notification when a new crash appears (the Crashes count in the menu is the only signal)
 
 ## Documents
 

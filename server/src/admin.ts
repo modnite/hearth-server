@@ -7,6 +7,7 @@ import { nanoid } from 'nanoid';
 import { currentUser, createSession, hashPassword } from './auth.js';
 import { ConfigError, SETTINGS, backupStorageOn, cfg, describeConfig, registrationOpen, sourceOf, updateConfig } from './config.js';
 import { db, now, type UserRow } from './db.js';
+import { deleteGroup, groupDetail, listGroups, openGroupCount, parseReport, pruneReports, setResolved, storeReport } from './crashReports.js';
 import { env } from './env.js';
 import { pushEnabled } from './push.js';
 import { FailureLimiter } from './ratelimit.js';
@@ -39,6 +40,8 @@ CREATE TABLE IF NOT EXISTS admin_log (
 
 const MB = 1024 * 1024;
 const setupByIp = new FailureLimiter(10, 15 * 60_000);
+/** Crash reports per address: a crash loop on one phone must not fill the database. */
+const crashByIp = new FailureLimiter(30, 60 * 60_000);
 
 function audit(who: UserRow | string, action: string, detail = ''): void {
   db.prepare('INSERT INTO admin_log (at, who, action, detail) VALUES (?, ?, ?, ?)').run(now(), typeof who === 'string' ? who : who.username, action, detail.slice(0, 300));
@@ -169,7 +172,7 @@ export function registerAdmin(app: FastifyInstance, deps: AdminDeps): void {
       registration: registrationOpen() ? 'open' : 'invite',
       houseKey: cfg('registrationKey').length >= 8,
       setupNeeded: count('SELECT COUNT(*) AS n FROM users') === 0,
-      features: { calls: livekitConfigured(), push: pushEnabled(), backups: backupStorageOn(), browser: cfg('browser') !== 'off', twoStep: true, friends: true },
+      features: { calls: livekitConfigured(), push: pushEnabled(), backups: backupStorageOn(), browser: cfg('browser') !== 'off', twoStep: true, friends: true, crashReports: cfg('crashReports') !== 'off' },
       limits: { backupQuotaMb: Number(cfg('backupQuotaMb')), backupMaxFileMb: Number(cfg('backupMaxFileMb')) },
     };
   });
@@ -223,6 +226,7 @@ export function registerAdmin(app: FastifyInstance, deps: AdminDeps): void {
         messages: count('SELECT COUNT(*) AS n FROM messages'),
         attachments: count('SELECT COUNT(*) AS n FROM attachments'),
         openInvites: count('SELECT COUNT(*) AS n FROM invites WHERE used_by IS NULL'),
+        openCrashes: openGroupCount(),
       },
       storageBytes: s,
       calls: { configured: livekitConfigured(), reachable: lk, url: sourceOf('livekitUrl') !== 'default' ? cfg('livekitUrl') : '(from the address clients use)' },
@@ -412,6 +416,66 @@ export function registerAdmin(app: FastifyInstance, deps: AdminDeps): void {
     audit(me, 'delete-backup', `${u.username}/${name}`);
     return { ok: true };
   });
+
+  // ---- crash reports ---------------------------------------------------------------------------------------------
+  // Any client may send one, signed in or not (a crash can happen before sign-in). Rate limited per address.
+  app.post('/api/crash-reports', async (req, reply) => {
+    if (cfg('crashReports') === 'off') return reply.code(403).send({ error: 'this server does not collect crash reports' });
+    const wait = crashByIp.blockedFor(req.ip);
+    if (wait) {
+      reply.header('retry-after', String(wait));
+      return reply.code(429).send({ error: 'too many crash reports from this address; try again later' });
+    }
+    const report = parseReport(req.body);
+    if (typeof report === 'string') return reply.code(400).send({ error: report });
+    crashByIp.fail(req.ip);
+    const stored = storeReport(report, currentUser(req)?.id ?? null);
+    return { ok: true, id: stored.id };
+  });
+
+  app.get('/api/admin/crashes', async (req, reply) => {
+    if (!requireAdmin(req, reply)) return;
+    const q = req.query as { status?: string; source?: string };
+    const status = q.status === 'resolved' || q.status === 'all' ? q.status : 'open';
+    const groups = listGroups({ status, source: q.source || undefined });
+    return { groups, open: openGroupCount(), keepDays: Number(cfg('crashKeepDays')), collecting: cfg('crashReports') !== 'off' };
+  });
+
+  app.get('/api/admin/crashes/:signature', async (req, reply) => {
+    if (!requireAdmin(req, reply)) return;
+    const found = groupDetail((req.params as { signature: string }).signature);
+    if (!found) return reply.code(404).send({ error: 'no such crash' });
+    return found;
+  });
+
+  app.post('/api/admin/crashes/:signature/resolve', async (req, reply) => {
+    const me = requireAdmin(req, reply);
+    if (!me) return;
+    const body = (req.body ?? {}) as { resolved?: unknown; note?: unknown };
+    const signature = (req.params as { signature: string }).signature;
+    if (!setResolved(signature, body.resolved !== false, typeof body.note === 'string' ? body.note : '')) return reply.code(404).send({ error: 'no such crash' });
+    audit(me, body.resolved === false ? 'reopen-crash' : 'resolve-crash', signature);
+    return { ok: true };
+  });
+
+  app.delete('/api/admin/crashes/:signature', async (req, reply) => {
+    const me = requireAdmin(req, reply);
+    if (!me) return;
+    const signature = (req.params as { signature: string }).signature;
+    if (!deleteGroup(signature)) return reply.code(404).send({ error: 'no such crash' });
+    audit(me, 'delete-crash', signature);
+    return { ok: true };
+  });
+
+  const prune = () => {
+    try {
+      pruneReports(Number(cfg('crashKeepDays')));
+    } catch {
+      /* the next hour tries again */
+    }
+  };
+  prune();
+  setInterval(prune, 3_600_000).unref();
 
   // ---- log, route list, restart ----------------------------------------------------------------------------------
   app.get('/api/admin/log', async (req, reply) => {

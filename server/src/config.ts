@@ -40,6 +40,9 @@ export const SETTINGS: SettingDef[] = [
 
   { key: 'browser', env: 'BROWSE_PROXY', group: 'Features', label: 'Built-in browser proxy', help: 'Lets clients open web pages through this server. Switch off if you do not want the server fetching pages for people.', type: 'choice', default: 'on', choices: ['on', 'off'], live: true },
 
+  { key: 'crashReports', env: 'CRASH_REPORTS', group: 'Crash reports', label: 'Collect crash reports', help: 'Clients such as Ember and the web app send their crash logs here for you to review.', type: 'choice', default: 'on', choices: ['on', 'off'], live: true },
+  { key: 'crashKeepDays', env: 'CRASH_KEEP_DAYS', group: 'Crash reports', label: 'Keep reports for (days)', help: 'Older reports are deleted.', type: 'number', default: '90', live: true, min: 1, max: 3650 },
+
   { key: 'livekitUrl', env: 'LIVEKIT_URL', group: 'Calls', label: 'LiveKit address for clients', help: 'The wss:// address clients connect to for voice and video (the base address, no /rtc).', type: 'text', default: 'ws://localhost:7880', live: false },
   { key: 'livekitInternalUrl', env: 'LIVEKIT_INTERNAL_URL', group: 'Calls', label: 'LiveKit address for this server', help: 'How this server reaches LiveKit itself, usually http://127.0.0.1:7880 or the container name.', type: 'text', default: 'http://127.0.0.1:7880', live: false },
   { key: 'livekitKey', env: 'LIVEKIT_API_KEY', group: 'Calls', label: 'LiveKit API key', help: 'Must match the key in the LiveKit configuration.', type: 'text', default: 'hearth', live: false },

@@ -46,6 +46,7 @@ Each setting has a default, an environment variable and a place in the panel. A 
 | House key | `REGISTRATION_KEY` | at once |
 | Backups on/off, space per person, largest file | `BACKUP_STORAGE`, `BACKUP_QUOTA_MB`, `BACKUP_MAX_FILE_MB` | at once |
 | Built-in browser proxy | `BROWSE_PROXY` (`on`/`off`) | at once |
+| Collect crash reports, days to keep them | `CRASH_REPORTS` (`on`/`off`), `CRASH_KEEP_DAYS` | at once |
 | Public address | `HEARTH_DOMAIN` | restart |
 | LiveKit address, internal address, key, secret | `LIVEKIT_URL`, `LIVEKIT_INTERNAL_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | restart |
 | Web push keys and contact | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | restart |
