@@ -1,6 +1,5 @@
 // The small UI kit every view uses. Everything is built with DOM calls and textContent (never innerHTML), so a name or a note that
 // somebody typed can never run as markup.
-import { icon } from './icons.js';
 
 export function h(tag, attrs, ...kids) {
   const el = document.createElement(tag);
@@ -77,15 +76,15 @@ export function avatar(user, cls = '') {
   return h('span', { class: 'avatar ' + cls, style: `background:${user.avatarColor || '#7c6cff'}`, 'aria-hidden': 'true' }, initials(user.displayName || user.username));
 }
 export const pill = (text, kind = '') => h('span', { class: 'pill ' + kind }, text);
-export function button(label, { kind = '', icon: ic, onclick, small, title, disabled } = {}) {
-  return h('button', { type: 'button', class: ['btn', kind, small ? 'sm' : '', label ? '' : 'icon-only'].filter(Boolean).join(' '), onclick, title, 'aria-label': label ? null : title, disabled }, ic ? icon(ic, small ? 'sm' : '') : null, label);
+export function button(label, { kind = '', onclick, small, title, disabled } = {}) {
+  return h('button', { type: 'button', class: ['btn', kind, small ? 'sm' : ''].filter(Boolean).join(' '), onclick, title, 'aria-label': label ? null : title, disabled }, label);
 }
 
 // ---- toast ---------------------------------------------------------------------------------------------
 let toasts;
 export function toast(text, bad = false) {
   if (!toasts) { toasts = h('div', { class: 'toasts', role: 'status', 'aria-live': 'polite' }); document.body.append(toasts); }
-  const t = h('div', { class: 'toast' + (bad ? ' bad' : '') }, icon(bad ? 'alert' : 'check', 'sm'), text);
+  const t = h('div', { class: 'toast' + (bad ? ' bad' : '') }, text);
   toasts.append(t);
   setTimeout(() => t.remove(), bad ? 6500 : 3200);
 }
@@ -124,16 +123,17 @@ export async function confirmBox({ title, text, yes = 'Yes', danger = false }) {
 export function secretDialog({ title, lead, value }) {
   return modal({
     title,
-    body: [h('p', null, lead), h('div', { class: 'secretbox' }, h('span', { style: 'user-select:all' }, value), button('', { icon: 'copy', title: 'Copy', kind: 'quiet', onclick: () => copy(value) }))],
+    body: [h('p', null, lead), h('div', { class: 'secretbox' }, h('span', { style: 'user-select:all' }, value), button('Copy', { small: true, onclick: () => copy(value) }))],
     buttons: [{ label: 'Done', value: true, kind: 'primary' }],
   });
 }
 
 /** A side panel (a bottom sheet on phones). `build(close)` returns its content. */
+/** A plain dialog whose content (a header, rows, buttons) comes from `build(close)`. */
 export function drawer(build) {
-  const dlg = h('dialog', { class: 'drawer', 'aria-label': 'Details' });
+  const dlg = h('dialog', { class: 'modal', 'aria-label': 'Details' });
   const close = () => dlg.close();
-  dlg.append(h('div', { class: 'drawer-panel' }, build(close)));
+  dlg.append(h('div', { class: 'sheet' }, build(close)));
   openDialog(dlg);
   return { close, el: dlg };
 }
@@ -151,7 +151,7 @@ export const theme = {
 };
 
 export function skeleton(rows = 4) {
-  return h('div', { class: 'panel' }, Array.from({ length: rows }, (_, i) => h('div', { style: 'padding:16px 24px;border-top:' + (i ? '1px solid var(--line)' : '0') }, h('div', { class: 'skel', style: `height:14px;width:${40 + ((i * 17) % 40)}%` }), h('div', { class: 'skel', style: 'height:11px;width:30%;margin-top:10px;opacity:.7' }))));
+  return h('div', { class: 'panel' }, Array.from({ length: rows }, () => h('div', { class: 'skel' })));
 }
 
 export function pageHead({ title, actions }) {

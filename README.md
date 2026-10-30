@@ -34,11 +34,11 @@ No calls wanted, or on Docker Desktop (Windows, macOS), which has no host networ
 
 ## The admin panel (`/admin`)
 
-![The overview, dark theme](docs/screenshots/overview-dark.png)
+![Overview](docs/screenshots/overview.png)
 
 <p>
-<img src="docs/screenshots/people-dark.png" alt="Managing a person" width="49%">
-<img src="docs/screenshots/settings-light.png" alt="Settings, light theme" width="49%">
+<img src="docs/screenshots/settings.png" alt="Settings" width="49%">
+<img src="docs/screenshots/people.png" alt="People, dark theme" width="49%">
 </p>
 
 | Tab | What it does |
@@ -51,7 +51,7 @@ No calls wanted, or on Docker Desktop (Windows, macOS), which has no host networ
 | Activity | What administrators did |
 | For client builders | The server's capabilities and the full route list |
 
-It is plain HTML and JavaScript served by the server itself: no build step, no outside requests, works on a phone, follows the light or dark setting.
+A plain system-administration page, served by the server itself: no build step, no outside requests, light and dark, usable on a phone.
 
 ## What is in the box
 

@@ -1,17 +1,9 @@
-import { icon } from './icons.js';
-import { api, bytes, button, copy, confirmBox, duration, h, pageHead, toast } from './ui.js';
+import { api, bytes, button, confirmBox, copy, duration, h, pageHead, pill, toast } from './ui.js';
 
 const DISMISSED = 'hearth-admin-checklist-dismissed';
 const dismissed = () => { try { return localStorage.getItem(DISMISSED) === '1'; } catch { return false; } };
 
-function stat(n, label) {
-  return h('div', { class: 'stat' }, h('div', { class: 'n' }, String(n)), h('div', { class: 'l' }, label));
-}
-
-function service({ ico, title, text, on, label }) {
-  return h('div', { class: 'svc' }, h('span', { class: 'ico' }, icon(ico)), h('div', null, h('div', { class: 't' }, title)),
-    h('span', { class: 'pill ' + (on === true ? 'good' : on === 'bad' ? 'bad' : '') }, h('span', { class: 'dot' }), label));
-}
+const kv = (rows) => h('div', { class: 'kv' }, rows.flatMap(([k, v]) => [h('div', { class: 'k' }, k), h('div', null, v)]));
 
 export async function overview(ctx) {
   const [s, info] = await Promise.all([api('/api/admin/status'), api('/api/server/info')]);
@@ -19,16 +11,15 @@ export async function overview(ctx) {
   ctx.setCounts({ users: s.counts.users, invites: s.counts.openInvites });
   const origin = location.origin;
 
-  // things worth knowing, at the top
   const banners = [];
-  if (!s.secrets.sessionSecretChanged) banners.push({ text: 'SESSION_SECRET is still the built-in default. Set a long random value in the server environment so sessions cannot be forged.' });
-  if (s.calls.configured && !s.calls.reachable) banners.push({ text: 'LiveKit is set up, but this server cannot reach it. Calls will fail until it can.', action: ['Calls settings', () => ctx.go('settings', 'Calls')] });
-  if (info.registration === 'open') banners.push({ text: 'Anyone who can reach this server can create an account.', action: ['Change this', () => ctx.go('settings', 'Joining')] });
+  if (!s.secrets.sessionSecretChanged) banners.push({ text: 'SESSION_SECRET is still the built-in default. Set a long random value in the server environment.' });
+  if (s.calls.configured && !s.calls.reachable) banners.push({ text: 'LiveKit is set up, but this server cannot reach it. Calls will fail.', action: ['Calls settings', () => ctx.go('settings', 'Calls')] });
+  if (info.registration === 'open') banners.push({ text: 'Anyone who can reach this server can create an account.', action: ['Change', () => ctx.go('settings', 'Joining')] });
 
   const steps = [
     { done: true, t: 'Create the administrator' },
-    { done: info.name !== 'Hearth', t: 'Name your server', go: ['Open settings', () => ctx.go('settings', 'Server')] },
-    { done: s.counts.users > 1, t: 'Invite your first person', go: ['Invite', () => ctx.go('invites')] },
+    { done: info.name !== 'Hearth', t: 'Name the server', go: ['Settings', () => ctx.go('settings', 'Server')] },
+    { done: s.counts.users > 1, t: 'Invite the first person', go: ['Invites', () => ctx.go('invites')] },
     { done: s.calls.configured, t: 'Set up voice and video', go: ['Calls settings', () => ctx.go('settings', 'Calls')] },
     { done: s.push.configured, t: 'Turn on notifications', go: ['Notification settings', () => ctx.go('settings', 'Notifications')] },
   ];
@@ -36,54 +27,54 @@ export async function overview(ctx) {
   const showList = !dismissed() && doneCount < steps.length;
 
   const total = s.storageBytes.uploads + s.storageBytes.backups + s.storageBytes.database;
-  const parts = [
-    ['Shared files', s.storageBytes.uploads, 'var(--accent)'],
-    ['Backups', s.storageBytes.backups, 'light-dark(#2f6fcb, #6aa8f0)'],
-    ['Database', s.storageBytes.database, 'light-dark(#3e9a5a, #66c98a)'],
-  ];
+  const parts = [['Shared files', s.storageBytes.uploads, '#5a7fa8'], ['Backups', s.storageBytes.backups, '#8a8f94'], ['Database', s.storageBytes.database, '#b0a37a']];
 
-  return h('div', { class: 'page fade' },
+  const status = (label, on) => h('span', null, h('span', { class: 'dot' + (on === true ? ' good' : on === 'bad' ? ' bad' : '') }), label);
+
+  return h('div', null,
     pageHead({ title: info.name }),
-    banners.length ? h('div', { class: 'banners' }, banners.map((b) => h('div', { class: 'banner warn', role: 'note' }, icon('alert'), h('div', { class: 'grow' }, b.text), b.action ? button(b.action[0], { small: true, onclick: b.action[1] }) : null))) : null,
-
-    h('section', { class: 'hero' },
-      h('div', null,
-        h('div', { class: 'status' }, h('span', { class: 'dot good' }), 'Running'),
-        h('h2', null, 'Server address'),
-        h('div', { class: 'address' }, h('code', null, origin), h('button', { type: 'button', class: 'btn', onclick: () => copy(origin, 'Address copied') }, icon('copy', 'sm'), 'Copy'))),
-      h('div', { class: 'facts' },
-        h('div', { class: 'fact' }, h('div', { class: 'k' }, 'Version'), h('div', { class: 'v num' }, s.version)),
-        h('div', { class: 'fact' }, h('div', { class: 'k' }, 'Up for'), h('div', { class: 'v num' }, duration(s.uptimeSeconds))),
-        h('div', { class: 'fact' }, h('div', { class: 'k' }, 'Memory'), h('div', { class: 'v num' }, `${s.memoryMb} MB`)))),
-
-    showList ? h('section', null,
-      h('div', { class: 'section-title' }, h('h2', null, 'Get started'), h('span', { class: 'meta num' }, `${doneCount} of ${steps.length} done`, ' ', h('button', { type: 'button', class: 'link', onclick: () => { try { localStorage.setItem(DISMISSED, '1'); } catch { /* ignore */ } ctx.render(); } }, 'Hide'))),
-      h('div', { class: 'panel' },
-        h('div', { class: 'progress' }, h('span', { style: `width:${(doneCount / steps.length) * 100}%` })),
-        h('div', { class: 'divided' }, steps.map((x) => h('div', { class: 'step' + (x.done ? ' done' : '') }, h('span', { class: 'tick' }, icon('check', 'sm')), h('div', null, h('div', { class: 't' }, x.t)), !x.done && x.go ? button(x.go[0], { small: true, onclick: x.go[1] }) : null))))) : null,
-
-    h('section', { class: 'stats' }, stat(s.counts.users, s.counts.users === 1 ? 'person' : 'people'), stat(s.counts.signedIn, 'signed in now'), stat(s.counts.rooms, s.counts.rooms === 1 ? 'chat or room' : 'chats and rooms'), stat(s.counts.messages, s.counts.messages === 1 ? 'message' : 'messages')),
+    banners.length ? h('div', { class: 'banners' }, banners.map((b) => h('div', { class: 'banner', role: 'note' }, h('div', { class: 'grow' }, b.text), b.action ? button(b.action[0], { small: true, onclick: b.action[1] }) : null))) : null,
 
     h('div', { class: 'cols' },
-      h('section', null,
-        h('div', { class: 'section-title' }, h('h2', null, 'Storage'), h('span', { class: 'meta num' }, bytes(total), ' in use')),
-        h('div', { class: 'panel pad' },
-          h('div', { class: 'usage-bar', role: 'img', 'aria-label': parts.map(([n, v]) => `${n} ${bytes(v)}`).join(', ') },
-            total === 0 ? h('span', { class: 'empty' }) : parts.filter(([, v]) => v > 0).map(([, v, c]) => h('span', { style: `--c:${c};flex:${v} 1 0` }))),
-          h('div', { class: 'legend' }, parts.map(([n, v, c]) => h('div', { class: 'item', style: `--c:${c}` }, h('span', { class: 'sw' }), h('span', null, n), h('span', { class: 'val' }, bytes(v))))),
-          h('p', { class: 'hint mono', style: 'margin-top:16px' }, s.dataDir))),
-      h('section', null,
-        h('div', { class: 'section-title' }, h('h2', null, 'Services')),
-        h('div', { class: 'panel divided' },
-          service({ ico: 'phonecall', title: 'Voice and video', text: s.calls.configured ? (s.calls.reachable ? 'LiveKit answers.' : 'Set up, but not reachable.') : 'Not set up.', on: s.calls.configured ? (s.calls.reachable ? true : 'bad') : false, label: s.calls.configured ? (s.calls.reachable ? 'Ready' : 'Unreachable') : 'Off' }),
-          service({ ico: 'bell', title: 'Push notifications', text: s.push.configured ? 'Browsers and PWAs can be notified.' : 'Needs web push keys.', on: s.push.configured, label: s.push.configured ? 'On' : 'Off' }),
-          service({ ico: 'backups', title: 'Backups for people', text: info.features.backups ? `${Math.round(info.limits.backupQuotaMb / 1024 * 10) / 10} GB each, sealed on their device.` : 'Switched off.', on: info.features.backups, label: info.features.backups ? 'On' : 'Off' }),
-          service({ ico: 'globe', title: 'Built-in browser', text: info.features.browser ? 'This server fetches pages for signed-in people.' : 'Switched off.', on: info.features.browser, label: info.features.browser ? 'On' : 'Off' })))),
+      h('div', { class: 'panel' }, h('div', { class: 'ph' }, 'Server'),
+        kv([
+          ['Address', h('span', null, h('code', null, origin), ' ', button('Copy', { small: true, onclick: () => copy(origin, 'Address copied') }))],
+          ['Status', status('Running', true)],
+          ['Version', h('span', { class: 'num' }, `${s.version} (API ${s.apiVersion})`)],
+          ['Up for', h('span', { class: 'num' }, duration(s.uptimeSeconds))],
+          ['Memory', h('span', { class: 'num' }, `${s.memoryMb} MB`)],
+          ['Runtime', h('span', { class: 'num' }, `Node ${s.node}, ${s.platform}`)],
+          ['Data folder', h('code', null, s.dataDir)],
+        ])),
+      h('div', { class: 'panel' }, h('div', { class: 'ph' }, 'Services'),
+        h('div', { class: 'table-wrap' }, h('table', null, h('tbody', null,
+          h('tr', null, h('td', null, 'Voice and video'), h('td', null, s.calls.configured ? (s.calls.reachable ? status('Ready', true) : status('Not reachable', 'bad')) : status('Off', false))),
+          h('tr', null, h('td', null, 'Push notifications'), h('td', null, status(s.push.configured ? 'On' : 'Off', s.push.configured))),
+          h('tr', null, h('td', null, 'Backups kept here'), h('td', null, status(info.features.backups ? `On, ${Math.round(info.limits.backupQuotaMb / 1024 * 10) / 10} GB each` : 'Off', info.features.backups))),
+          h('tr', null, h('td', null, 'Browser proxy'), h('td', null, status(info.features.browser ? 'On' : 'Off', info.features.browser))),
+          h('tr', null, h('td', null, 'Registration'), h('td', null, info.registration === 'open' ? 'Open' : info.houseKey ? 'Invite or house key' : 'Invite only')))))),
+    ),
 
-    h('footer', { class: 'foot' },
-      h('p', { class: 'hint num' }, `Node ${s.node} · ${s.platform} · API ${s.apiVersion}`),
-      s.supervised ? button('Restart server', { kind: 'danger sm', icon: 'power', onclick: async () => {
-        if (!(await confirmBox({ title: 'Restart the server?', text: 'People are disconnected for a few seconds and reconnect by themselves.', yes: 'Restart', danger: true }))) return;
-        try { await api('/api/admin/restart', { method: 'POST' }); toast('Restarting. This page reconnects by itself.'); setTimeout(() => ctx.render(), 6000); } catch (e) { toast(e.message, true); }
-      } }) : null));
+    h('div', { class: 'cols' },
+      h('div', { class: 'panel' }, h('div', { class: 'ph' }, 'Counts'),
+        kv([
+          ['People', h('span', { class: 'num' }, String(s.counts.users))],
+          ['Signed in now', h('span', { class: 'num' }, String(s.counts.signedIn))],
+          ['Chats and rooms', h('span', { class: 'num' }, String(s.counts.rooms))],
+          ['Messages', h('span', { class: 'num' }, String(s.counts.messages))],
+          ['Files shared', h('span', { class: 'num' }, String(s.counts.attachments))],
+          ['Unused invites', h('span', { class: 'num' }, String(s.counts.openInvites))],
+        ])),
+      h('div', { class: 'panel' }, h('div', { class: 'ph' }, 'Storage', h('span', { class: 'meta num' }, bytes(total))),
+        h('div', { class: 'pad' }, h('div', { class: 'bar', role: 'img', 'aria-label': parts.map(([n, v]) => `${n} ${bytes(v)}`).join(', ') }, parts.filter(([, v]) => v > 0).map(([, v, c]) => h('span', { style: `--c:${c};flex:${v} 1 0` })))),
+        h('div', { class: 'table-wrap' }, h('table', null, h('tbody', null, parts.map(([n, v, c]) => h('tr', null, h('td', null, h('span', { class: 'swatch', style: `--c:${c}` }), n), h('td', { class: 'r num' }, bytes(v))))))))),
+
+    showList ? h('div', { class: 'panel' },
+      h('div', { class: 'ph' }, 'Setup', h('span', { class: 'meta' }, `${doneCount} of ${steps.length} done `, h('button', { type: 'button', class: 'link', onclick: () => { try { localStorage.setItem(DISMISSED, '1'); } catch { /* ignore */ } ctx.render(); } }, 'Hide'))),
+      h('div', { class: 'table-wrap' }, h('table', null, h('tbody', null, steps.map((x) => h('tr', { class: x.done ? 'off' : '' }, h('td', null, x.done ? '✓ ' : '☐ ', x.t), h('td', { class: 'actions' }, !x.done && x.go ? button(x.go[0], { small: true, onclick: x.go[1] }) : null))))))) : null,
+
+    s.supervised ? h('div', null, button('Restart server', { kind: 'danger', onclick: async () => {
+      if (!(await confirmBox({ title: 'Restart the server', text: 'People are disconnected for a few seconds and reconnect by themselves.', yes: 'Restart', danger: true }))) return;
+      try { await api('/api/admin/restart', { method: 'POST' }); toast('Restarting. This page reconnects by itself.'); setTimeout(() => ctx.render(), 6000); } catch (e) { toast(e.message, true); }
+    } })) : null);
 }
