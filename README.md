@@ -52,7 +52,14 @@ Everything else about deploying is in [docs/DEPLOY.md](docs/DEPLOY.md): reverse 
 
 ## Admin panel
 
-Served at `/admin` by the server itself. Plain ES modules, no build step, no outside requests, light and dark, works on a phone.
+Served at `/admin` by the server itself. Plain ES modules served as they are, light and dark themes, usable on a phone. It makes no requests to other sites.
+
+<p>
+<img src="docs/screenshots/invites.png" alt="Invites" width="24%">
+<img src="docs/screenshots/backups.png" alt="Backups" width="24%">
+<img src="docs/screenshots/activity.png" alt="Activity" width="24%">
+<img src="docs/screenshots/client-builders.png" alt="For client builders" width="24%">
+</p>
 
 | Page | Contents |
 |---|---|
