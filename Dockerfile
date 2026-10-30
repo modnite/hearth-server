@@ -18,7 +18,9 @@ RUN npm run build \
 
 # --- runtime: slim, no toolchain, no dev dependencies, not root ---
 FROM node:22-bookworm-slim AS runtime
-LABEL org.opencontainers.image.source="https://github.com/modnite/hearth-server" \n      org.opencontainers.image.description="The Hearth server" \n      org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.source="https://github.com/modnite/hearth-server"
+LABEL org.opencontainers.image.description="The Hearth server"
+LABEL org.opencontainers.image.licenses="MIT"
 ENV NODE_ENV=production \
     PORT=8080 \
     DATA_DIR=/data
