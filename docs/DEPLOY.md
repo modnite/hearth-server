@@ -99,6 +99,7 @@ Pin what you run: use a release tag (`git checkout v1.0.0`) and set `LIVEKIT_TAG
 - The admin panel is the same server: protect `/admin` like the rest (HTTPS, strong administrator passwords, two-step sign-in on administrator accounts).
 - Open registration is limited to five new accounts an hour from one address; invite-only is the safer default.
 - The built-in browser proxy fetches pages for signed-in people. Switch it off in Settings if you do not want your server doing that.
+- The data folder is sensitive: it holds the database, uploads, backups and `config.json`, which contains any secrets you set in the panel (house key, LiveKit and web push keys). It is readable only by its owner; treat backups of it the same way.
 - Run the server as the unprivileged `node` user (the image does). The container filesystem is otherwise ordinary; the data volume is the only thing that needs to be writable.
 
 ## 8. Troubleshooting

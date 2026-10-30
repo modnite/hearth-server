@@ -58,7 +58,7 @@ services:
   livekit:
     <<: *common
     profiles: ["calls"]
-    image: livekit/livekit-server:${LIVEKIT_TAG:-v1.9.0}
+    image: livekit/livekit-server:${LIVEKIT_TAG:-v1.13.11}
     command: ["--config", "/etc/livekit.yaml"]
     network_mode: host
     volumes:
