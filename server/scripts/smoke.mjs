@@ -43,6 +43,7 @@ async function check(name, fn) {
 
 const admin = new Client();
 const alice = new Client();
+const bob = new Client();
 const anon = new Client();
 const password = 'correct horse battery';
 
@@ -138,7 +139,6 @@ await check('the house key lets someone in, an invite code does too, and codes a
   assert.equal(viaKey.status, 200, viaKey.text);
   const code = (await admin.call('/api/admin/invites', { method: 'POST' })).json.code;
   assert.ok(code);
-  const bob = new Client();
   const r1 = await bob.call('/api/auth/register', { method: 'POST', body: { invite: code, username: 'bob', password } });
   assert.equal(r1.status, 200, r1.text);
   const r2 = await new Client().call('/api/auth/register', { method: 'POST', body: { invite: code, username: 'bob2', password } });
@@ -220,6 +220,50 @@ await check('the route list and the activity log are there for the administrator
   assert.ok(log.some((l) => l.action === 'setup'));
   assert.ok(log.some((l) => l.action === 'disable'));
   assert.ok(log.some((l) => l.action === 'reset-password'));
+});
+
+await check('group chats: add people, remove people, rename, hand over when the maker leaves', async () => {
+  const mk = async (name) => { const c = new Client(); const code = (await admin.call('/api/admin/invites', { method: 'POST' })).json.code; const r = await c.call('/api/auth/register', { method: 'POST', body: { invite: code, username: name, password } }); assert.equal(r.status, 200, r.text); return [c, r.json.user.id]; };
+  const [carol, carolId] = await mk('carol');
+  const [dave, daveId] = await mk('dave');
+  const users = (await admin.call('/api/admin/users')).json.users;
+  const bobId = users.find((u) => u.username === 'bob').id;
+  const made = await admin.call('/api/rooms', { method: 'POST', body: { name: 'Kitchen', memberIds: [bobId] } });
+  assert.equal(made.status, 200, made.text);
+  const room = made.json.room;
+  const adminId = (await admin.call('/api/auth/me')).json.user.id;
+  assert.equal(room.createdBy, adminId, 'the room says who made it');
+  // anyone in the group can add their own contacts
+  const add = await admin.call(`/api/rooms/${room.id}/members`, { method: 'POST', body: { userIds: [carolId] } });
+  assert.equal(add.status, 200, add.text);
+  assert.deepEqual(add.json.added, [carolId]);
+  assert.equal(add.json.room.members.length, 3);
+  // a person who is not a contact of the adder is skipped with a reason, not an error
+  const skip = await carol.call(`/api/rooms/${room.id}/members`, { method: 'POST', body: { userIds: [daveId] } });
+  assert.equal(skip.status, 200);
+  assert.deepEqual(skip.json.added, []);
+  assert.equal(skip.json.skipped[0].reason, 'not one of your contacts');
+  assert.equal((await dave.call(`/api/rooms/${room.id}/members`, { method: 'POST', body: { userIds: [carolId] } })).status, 403, 'outsiders cannot add');
+  // members can rename a group, not a direct chat
+  const ren = await bob.call(`/api/rooms/${room.id}`, { method: 'PATCH', body: { name: 'The Kitchen' } });
+  assert.equal(ren.status, 200, ren.text);
+  assert.equal(ren.json.room.name, 'The Kitchen');
+  assert.equal((await bob.call(`/api/rooms/${room.id}`, { method: 'PATCH', body: { name: '   ' } })).status, 400, 'a blank name is refused');
+  const dm = (await admin.call(`/api/users/${bobId}/dm`, { method: 'POST' })).json.room;
+  assert.equal((await admin.call(`/api/rooms/${dm.id}`, { method: 'PATCH', body: { name: 'Hi' } })).status, 400, 'a direct chat cannot be renamed');
+  // only the maker removes people
+  assert.equal((await bob.call(`/api/rooms/${room.id}/members/${carolId}`, { method: 'DELETE' })).status, 403);
+  assert.equal((await admin.call(`/api/rooms/${room.id}/members/${adminId}`, { method: 'DELETE' })).status, 400, 'to go yourself, leave');
+  const gone = await admin.call(`/api/rooms/${room.id}/members/${carolId}`, { method: 'DELETE' });
+  assert.equal(gone.status, 200, gone.text);
+  assert.equal(gone.json.room.members.length, 2);
+  assert.equal((await carol.call(`/api/rooms/${room.id}/messages`)).status, 403, 'a removed person is out');
+  // the maker leaves: the group passes to the longest-standing member, who can then remove people
+  await admin.call(`/api/rooms/${room.id}/members`, { method: 'POST', body: { userIds: [carolId] } });
+  assert.equal((await admin.call(`/api/rooms/${room.id}/leave`, { method: 'POST', body: {} })).status, 200);
+  const after = (await bob.call('/api/rooms')).json.rooms.find((r) => r.id === room.id);
+  assert.equal(after.createdBy, bobId);
+  assert.equal((await bob.call(`/api/rooms/${room.id}/members/${carolId}`, { method: 'DELETE' })).status, 200);
 });
 
 await check('removing a person deletes the account', async () => {

@@ -46,6 +46,7 @@ import { registerServerBackups } from './serverBackups.js';
 import { isArchived, setArchived, blockedEitherWay, dmBlocked, findUser, friendCodeOf, registerSocial, USERNAME_RULE, usernameFree, validUsername } from './social.js';
 import { acceptContact, canSee, connectViaInvite, contactIds, pendingFor, removeContact, requestContact, visibleUserIds } from './contacts.js';
 import { registerNativeNotificationRoutes } from './nativeNotifications.js';
+import { addMembers, MemberError, passOnGroup, removeMember } from './groupMembers.js';
 
 const MAX_UPLOAD = 200 * 1024 * 1024;
 
@@ -114,6 +115,7 @@ function roomView(roomId: string, meId: string) {
         topic: string;
         avatar: string;
         encrypted: number;
+        created_by: string | null;
         created_at: number;
       }
     | undefined;
@@ -151,6 +153,8 @@ function roomView(roomId: string, meId: string) {
     avatar: room.avatar ? `/api/room-avatars/${room.avatar}` : null,
     encrypted: Boolean(room.encrypted),
     createdAt: room.created_at,
+    // Who made the group: the one who may remove people. Null for a group from before this was recorded.
+    createdBy: room.created_by ?? null,
     members,
     lastMessage: last ? fullMessage(last) : null,
     unread,
@@ -778,6 +782,11 @@ export function registerRoutes(app: FastifyInstance): void {
       name?: string;
       topic?: string;
     };
+    const before = db.prepare('SELECT kind, name FROM rooms WHERE id = ?').get(roomId) as { kind: string; name: string } | undefined;
+    if (!before) return reply.code(404).send({ error: 'no such room' });
+    // A direct chat is named after the other person, so only a group has a name of its own to change.
+    if (before.kind !== 'group' && (name || topic !== undefined)) return reply.code(400).send({ error: 'only a group chat can be renamed' });
+    if (name !== undefined && !name.trim()) return reply.code(400).send({ error: 'a group needs a name' });
     db.prepare(
       `UPDATE rooms
        SET encrypted = COALESCE(?, encrypted),
@@ -786,10 +795,11 @@ export function registerRoutes(app: FastifyInstance): void {
        WHERE id = ?`,
     ).run(
       encrypted === undefined ? null : encrypted ? 1 : 0,
-      name ? name.slice(0, 80) : null,
+      name ? name.trim().slice(0, 80) : null,
       topic === undefined ? null : topic.slice(0, 200),
       roomId,
     );
+    if (name && name.trim().slice(0, 80) !== before.name) hub.toRoom(roomId, { t: 'room.event', roomId, text: `${me.display_name} renamed the group to “${name.trim().slice(0, 80)}”` });
     for (const member of memberIds(roomId)) {
       hub.toUser(member, { t: 'room.updated', room: roomView(roomId, member) });
     }
@@ -816,12 +826,50 @@ export function registerRoutes(app: FastifyInstance): void {
     if (remaining.length === 0) {
       db.prepare('DELETE FROM rooms WHERE id = ?').run(roomId);
     } else {
+      passOnGroup(roomId, me.id);
       hub.toRoom(roomId, { t: 'room.event', roomId, text: `${me.display_name} left the group` });
       for (const member of remaining) {
         hub.toUser(member, { t: 'room.updated', room: roomView(roomId, member) });
       }
     }
     return { ok: true };
+  });
+
+  // Add people to a group chat (see groupMembers.ts for who may). Everyone already in it, and the new people, get the refreshed group.
+  app.post('/api/rooms/:id/members', async (req, reply) => {
+    const me = requireUser(req, reply);
+    if (!me) return;
+    const roomId = (req.params as { id: string }).id;
+    try {
+      const result = addMembers(roomId, me.id, (req.body as { userIds?: unknown } | undefined)?.userIds);
+      if (result.added.length) {
+        const names = result.added.map((id) => userById(id)?.display_name ?? 'someone');
+        hub.toRoom(roomId, { t: 'room.event', roomId, text: `${me.display_name} added ${names.join(', ')}` });
+        for (const member of memberIds(roomId)) hub.toUser(member, { t: 'room.updated', room: roomView(roomId, member) });
+      }
+      return { room: roomView(roomId, me.id), added: result.added, skipped: result.skipped };
+    } catch (e) {
+      if (e instanceof MemberError) return reply.code(e.status).send({ error: e.message });
+      throw e;
+    }
+  });
+
+  // Remove someone from a group chat (only the person who made it may; anyone can leave with /leave).
+  app.delete('/api/rooms/:id/members/:userId', async (req, reply) => {
+    const me = requireUser(req, reply);
+    if (!me) return;
+    const { id: roomId, userId } = req.params as { id: string; userId: string };
+    try {
+      const gone = userById(userId);
+      removeMember(roomId, me.id, userId);
+      hub.toUser(userId, { t: 'room.removed', roomId });
+      hub.toRoom(roomId, { t: 'room.event', roomId, text: `${me.display_name} removed ${gone?.display_name ?? 'someone'}` });
+      for (const member of memberIds(roomId)) hub.toUser(member, { t: 'room.updated', room: roomView(roomId, member) });
+      return { room: roomView(roomId, me.id) };
+    } catch (e) {
+      if (e instanceof MemberError) return reply.code(e.status).send({ error: e.message });
+      throw e;
+    }
   });
 
   // Group pictures: like profile pictures, but shared with the room's members.
