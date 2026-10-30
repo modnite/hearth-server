@@ -10,27 +10,27 @@ This is the server only. It has **no bundled client**. Clients talk to it over a
 
 You do not have to run the one big Hearth server somebody else runs. Run your own. Your accounts, messages, files and backups stay on your machine.
 
-## Run it in two minutes
+## Run it
 
-You need Docker with Compose, on Linux.
+You need Docker with Compose. The whole stack is one file:
 
 ```sh
-git clone https://github.com/modnite/hearth-server
-cd hearth-server
-sh scripts/setup.sh          # writes .env with fresh random secrets, and sets up voice and video
-docker compose up -d         # builds the image and starts the server and LiveKit
+curl -fsSLO https://raw.githubusercontent.com/modnite/hearth-server/main/compose.yml
+docker compose up -d
 ```
 
-Open <http://localhost:8080/admin> and create the first administrator, then point your client at the address on the Overview tab.
+That starts the server and LiveKit (voice and video). There is no `.env` to write and nothing else to download: an init step makes the LiveKit key and its configuration, the server makes its own session secret, and clients are told where to reach calls from the address they connected by. Open <http://localhost:8080/admin>, make the first administrator, and point your client at the address on the Overview page.
 
-**Voice and video** run in LiveKit, which starts with the server on Linux. Two things have to be true for calls to work:
+Calls need two things:
 
 1. **Forward the ports.** On your router, forward `7881/tcp` and `50100-50199/udp` to this machine.
-2. **Use HTTPS.** Browsers only allow camera and microphone on HTTPS. Point a domain at the machine and add `--profile tls` (see [docs/DEPLOY.md](docs/DEPLOY.md)). Native apps such as Ember do not need this.
+2. **HTTPS, for browsers.** Point a domain at the machine and run `HEARTH_DOMAIN=chat.example.com docker compose --profile tls up -d`. Native apps such as Ember do not need it.
 
-No calls wanted, or on Docker Desktop (Windows, macOS), which has no host networking? Run `sh scripts/setup.sh --no-calls`; it is left off there automatically.
+No calls wanted, or on Docker Desktop (Windows, macOS), which has no host networking for LiveKit: `docker compose up -d hearth`.
 
 > Calls between two real clients on this stack are not tested yet. Chat, groups, backups and the panel are.
+
+Data is in two Docker volumes, `hearth_data` (the database, files, backups, panel settings, session secret) and `hearth_shared` (LiveKit's key and configuration). Back up `hearth_data`.
 
 ## The admin panel (`/admin`)
 

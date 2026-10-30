@@ -3,13 +3,13 @@
 ## 1. The basics
 
 ```sh
-sh scripts/setup.sh
+curl -fsSLO https://raw.githubusercontent.com/modnite/hearth-server/main/compose.yml
 docker compose up -d
 ```
 
-`setup.sh` writes `.env` with a random `SESSION_SECRET` and LiveKit secret, and turns voice and video on (Linux). It never overwrites an existing `.env`. Everything in [`.env.example`](../.env.example) is optional except `SESSION_SECRET`.
+`compose.yml` is the whole deployment. Four services: `init` (runs once: makes LiveKit's key and configuration, finding this machine's public address), `hearth` (the server), `livekit` (voice and video) and `caddy` (HTTPS, only with `--profile tls`). The server makes its own session secret on first start and keeps it in the data volume. Nothing has to be configured to start.
 
-The server listens on `8080` (`HEARTH_PORT`). Set `HEARTH_BIND=127.0.0.1` if a reverse proxy on the same machine is the only thing that should reach it.
+Optional settings go in the shell or a `.env` next to the file: `HEARTH_PORT` (default 8080), `HEARTH_BIND` (`127.0.0.1` behind your own reverse proxy), `PUBLIC_IP` (skip the lookup, for a VPS), `HEARTH_DOMAIN`, `HEARTH_IMAGE`, `LIVEKIT_TAG`. Everything else is in the admin panel, Settings.
 
 Check it: `curl http://localhost:8080/api/server/info`. Then open `/admin`.
 
@@ -18,28 +18,22 @@ Check it: `curl http://localhost:8080/api/server/info`. Then open `/admin`.
 Browsers only allow camera and microphone on HTTPS, and people expect it. Point a DNS name at the machine, open ports 80 and 443, then:
 
 ```sh
-# in .env
-HEARTH_DOMAIN=chat.example.com
-docker compose --profile tls up -d
+HEARTH_DOMAIN=chat.example.com docker compose --profile tls up -d
 ```
 
-Caddy gets and renews the certificate by itself. It proxies the app and LiveKit's signalling.
+Caddy gets and renews the certificate by itself. It proxies the app and LiveKit's signalling (`/rtc`). Clients are then told to reach calls at `wss://chat.example.com`.
 
-Already have a reverse proxy (nginx, Traefik, Cloudflare Tunnel)? Skip the `tls` profile and proxy to `HEARTH_PORT`. Forward WebSocket upgrades on `/ws` and keep the `X-Forwarded-*` headers (the server trusts the proxy for client addresses).
+Already have a reverse proxy (nginx, Traefik, Cloudflare Tunnel)? Skip the `tls` profile and proxy to `HEARTH_PORT`. Forward WebSocket upgrades on `/ws`, send `X-Forwarded-Proto` and `X-Forwarded-For`, and also proxy `/rtc` to LiveKit on port 7880.
 
 ## 3. Voice and video
 
-Calls use [LiveKit](https://livekit.io). `scripts/setup.sh` turns it on by writing `COMPOSE_PROFILES=calls` into `.env` and renders `infra/livekit.yaml` with this machine's public address (looked up over HTTPS, or set `PUBLIC_IP` first). Then a plain `docker compose up -d` starts it next to the server.
+LiveKit starts with the stack. Forward `7881/tcp` and `50100-50199/udp` to the machine. Clients are told where to reach it from the address they connected by (`ws://THAT-ADDRESS:7880` over plain HTTP, `wss://THAT-ADDRESS` over HTTPS), so there is nothing to set; set "LiveKit address for clients" in Settings only if media lives somewhere else.
 
-Forward on your router: `7881/tcp` and `50100-50199/udp` (the range is `LIVEKIT_UDP_RANGE_START` and `_END`). If your public address changes, run `sh scripts/render-livekit.sh` again.
+The init step looks up this machine's public address over HTTPS (never STUN). If that fails, or the address changes, set `PUBLIC_IP` and run `docker compose up -d` again; without a public address, calls work on the local network only.
 
-`LIVEKIT_PUBLIC_URL` is what clients connect to. With a domain and the `tls` profile it is `wss://your-domain`; on a home network it is `ws://THIS-MACHINES-LAN-ADDRESS:7880`, which setup.sh fills in. Native apps work either way; browsers need HTTPS.
+LiveKit runs on the host network, which Docker Desktop (Windows, macOS) does not support: use `docker compose up -d hearth` there, or run LiveKit on a Linux machine and set the two LiveKit addresses in Settings.
 
-LiveKit runs on the host network, which Docker Desktop (Windows, macOS) does not support. Setup leaves calls off there. To turn them off anywhere: `sh scripts/setup.sh --no-calls`, delete the `COMPOSE_PROFILES=calls` line from `.env`, or start only the server with `docker compose up -d hearth`. To run LiveKit on a separate Linux machine, point `LIVEKIT_PUBLIC_URL` and `LIVEKIT_INTERNAL_URL` at it.
-
-No STUN or TURN server is contacted by the server side. If a client sits behind a network that blocks UDP entirely, LiveKit falls back to ICE-over-TCP on `7881`.
-
-The **Overview** tab shows whether calls are set up and whether the server can reach LiveKit. Calls between two real clients on this stack are not tested yet.
+No STUN or TURN server is contacted by the server side. If a client sits behind a network that blocks UDP entirely, LiveKit falls back to ICE-over-TCP on `7881`. The Overview page shows whether calls are set up and reachable. Calls between two real clients on this stack are not tested yet.
 
 ## 4. Configuration: panel, environment, defaults
 
@@ -56,7 +50,7 @@ Each setting has a default, an environment variable and a place in the panel. A 
 | LiveKit address, internal address, key, secret | `LIVEKIT_URL`, `LIVEKIT_INTERNAL_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | restart |
 | Web push keys and contact | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | restart |
 
-Not editable in the panel, on purpose: `SESSION_SECRET` and the data folder (`DATA_DIR`).
+Not editable in the panel, on purpose: `SESSION_SECRET` (made automatically and kept in the data volume, or set it in the environment) and the data folder (`DATA_DIR`).
 
 With the compose file, the **Restart server** button in the panel works (Docker restarts the container when it exits). Outside Docker the button is hidden; restart however you run it.
 
@@ -101,7 +95,6 @@ Pin what you run: use a release tag (`git checkout v1.0.0`) and set `LIVEKIT_TAG
 
 | Symptom | Check |
 |---|---|
-| `docker compose up` says `SESSION_SECRET` is required | run `sh scripts/setup.sh` (or set it in `.env`) |
 | Panel says calls "set up, not reachable" | the server cannot reach `LIVEKIT_INTERNAL_URL`; with the `calls` profile it is `http://host.docker.internal:7880` |
 | Clients cannot connect on a LAN | the clients need the machine's address, not `localhost`; use the connect address on the Overview tab |
 | A client works over HTTP but not camera or microphone | camera and microphone need HTTPS (see section 2) |

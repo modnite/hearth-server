@@ -1,13 +1,14 @@
-# Hearth server. One command; voice and video (LiveKit) are included on Linux, HTTPS (Caddy) is a profile.
+# The Hearth server, as one stack. This file is all there is to deploy: no .env, no other files.
 #
-#   sh scripts/setup.sh                      # writes .env with fresh random secrets; on Linux it also turns calls on
-#   docker compose up -d                     # the server on http://localhost:8080 (open /admin to set it up), with LiveKit
-#   docker compose --profile tls up -d       # also run Caddy for HTTPS on your own domain
+#   docker compose up -d                  # the server, and LiveKit for voice and video
+#   open http://localhost:8080/admin      # make the first administrator
 #
-# Calls are on because setup.sh wrote COMPOSE_PROFILES=calls into .env. For no calls (or on Docker Desktop, which has no host
-# networking) run  sh scripts/setup.sh --no-calls  or delete that line, or start only the server:  docker compose up -d hearth
+# What it does by itself: an init step makes LiveKit's key and configuration (it finds this machine's public address), the server makes its
+# own session secret, and clients are told where to reach calls from the address they connected by. Everything lives in the volumes.
 #
-# Everything the server keeps (accounts, messages, files, backups, panel settings) is in the "hearth_data" volume.
+# Optional, in the shell or a .env:  HEARTH_PORT, PUBLIC_IP, HEARTH_DOMAIN (for the "tls" profile), HEARTH_IMAGE, LIVEKIT_TAG.
+#   docker compose --profile tls up -d  # also HTTPS for HEARTH_DOMAIN (Caddy fetches the certificate)
+#   docker compose up -d hearth          # no voice and video (and on Docker Desktop, which has no host networking)
 name: hearth
 
 x-common: &common
@@ -18,54 +19,52 @@ x-common: &common
     options: { max-size: "10m", max-file: "3" }
 
 services:
+  # Runs once, then exits: prepares the shared volume for the others.
+  init:
+    image: ${HEARTH_IMAGE:-ghcr.io/modnite/hearth-server:latest}
+    build: { context: ., dockerfile: Dockerfile }
+    command: ["node", "scripts/init-stack.mjs"]
+    environment:
+      PUBLIC_IP: ${PUBLIC_IP:-}
+    volumes:
+      - hearth_shared:/shared
+    restart: "no"
+    security_opt: [no-new-privileges:true]
+    user: "0:0"
+
   hearth:
     <<: *common
-    image: ${HEARTH_IMAGE:-hearth-server:latest}
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${HEARTH_IMAGE:-ghcr.io/modnite/hearth-server:latest}
+    build: { context: ., dockerfile: Dockerfile }
     environment:
       NODE_ENV: production
       PORT: "8080"
       DATA_DIR: /data
-      # The panel's "Restart server" button works because Docker restarts a container that exits.
       HEARTH_SUPERVISED: "1"
       HEARTH_DOMAIN: ${HEARTH_DOMAIN:-localhost}
-      SESSION_SECRET: ${SESSION_SECRET:?Run sh scripts/setup.sh first, or set SESSION_SECRET in .env}
-      # Calls (only used with the "calls" profile or your own LiveKit)
-      LIVEKIT_URL: ${LIVEKIT_PUBLIC_URL:-ws://localhost:7880}
-      LIVEKIT_INTERNAL_URL: ${LIVEKIT_INTERNAL_URL:-http://host.docker.internal:7880}
-      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-hearth}
-      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-devsecret}
-      # Optional
-      HEARTH_NAME: ${HEARTH_NAME:-}
-      REGISTRATION: ${REGISTRATION:-invite}
-      REGISTRATION_KEY: ${REGISTRATION_KEY:-}
-      BACKUP_QUOTA_MB: ${BACKUP_QUOTA_MB:-}
-      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
-      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
-      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
-      FIRST_USER_USERNAME: ${FIRST_USER_USERNAME:-}
-      FIRST_USER_PASSWORD: ${FIRST_USER_PASSWORD:-}
+      LIVEKIT_INTERNAL_URL: http://host.docker.internal:7880
     volumes:
       - hearth_data:/data
+      - hearth_shared:/shared:ro
     ports:
       - "${HEARTH_BIND:-0.0.0.0}:${HEARTH_PORT:-8080}:8080"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      init: { condition: service_completed_successfully }
 
-  # Voice and video. LiveKit runs on the host network so it can use the UDP range below (Linux only).
-  # Forward on your router:  7881/tcp  and  50100-50199/udp   (setup.sh renders infra/livekit.yaml for it)
+  # Voice and video. Host networking so it can use the media ports (Linux only). Forward 7881/tcp and 50100-50199/udp on your router.
   livekit:
     <<: *common
-    profiles: ["calls"]
     image: livekit/livekit-server:${LIVEKIT_TAG:-v1.13.11}
-    command: ["--config", "/etc/livekit.yaml"]
+    command: ["--config", "/shared/livekit.yaml"]
     network_mode: host
     volumes:
-      - ./infra/livekit.yaml:/etc/livekit.yaml:ro
+      - hearth_shared:/shared:ro
+    depends_on:
+      init: { condition: service_completed_successfully }
 
-  # HTTPS for your own domain (needs HEARTH_DOMAIN to point at this machine and ports 80 and 443 open).
+  # HTTPS for HEARTH_DOMAIN. Camera and microphone in a browser need it; native apps do not.
   caddy:
     <<: *common
     profiles: ["tls"]
@@ -74,9 +73,11 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      HEARTH_DOMAIN: ${HEARTH_DOMAIN:?Set HEARTH_DOMAIN in .env for the tls profile}
+      HEARTH_DOMAIN: ${HEARTH_DOMAIN:-localhost}
+    configs:
+      - source: caddyfile
+        target: /etc/caddy/Caddyfile
     volumes:
-      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     extra_hosts:
@@ -84,7 +85,18 @@ services:
     depends_on:
       - hearth
 
+configs:
+  caddyfile:
+    content: |
+      {$$HEARTH_DOMAIN} {
+        encode zstd gzip
+        @livekit path /rtc /rtc/*
+        reverse_proxy @livekit host.docker.internal:7880
+        reverse_proxy hearth:8080
+      }
+
 volumes:
   hearth_data:
+  hearth_shared:
   caddy_data:
   caddy_config:

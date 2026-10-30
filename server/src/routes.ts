@@ -38,7 +38,7 @@ import {
 import { env } from './env.js';
 import { media, mediaRoomName } from './media.js';
 import { fetchPreview } from './preview.js';
-import { cfg, registrationOpen } from './config.js';
+import { cfg, registrationOpen, sourceOf } from './config.js';
 import { FailureLimiter } from './ratelimit.js';
 import { pushToUser } from './push.js';
 import { hub } from './realtime.js';
@@ -1413,7 +1413,12 @@ export function registerRoutes(app: FastifyInstance): void {
       name: me.display_name,
       room: mediaRoomName(roomId),
     });
-    return { url: env.LIVEKIT_URL, token, room: mediaRoomName(roomId) };
+    // The address clients connect to for media: the one set in the panel or the environment, else the address this request came in on
+    // (the same machine, port 7880; wss on the standard port when it arrived over HTTPS, where the reverse proxy forwards /rtc).
+    const explicit = sourceOf('livekitUrl') !== 'default';
+    const secure = req.protocol === 'https';
+    const url = explicit ? env.LIVEKIT_URL : secure ? `wss://${req.hostname}` : `ws://${req.hostname}:7880`;
+    return { url, token, room: mediaRoomName(roomId) };
   });
 
   // ---------------------------------------------------------------- invites

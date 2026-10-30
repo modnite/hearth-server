@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { nanoid } from 'nanoid';
 import { currentUser, createSession, hashPassword } from './auth.js';
-import { ConfigError, SETTINGS, backupStorageOn, cfg, describeConfig, registrationOpen, updateConfig } from './config.js';
+import { ConfigError, SETTINGS, backupStorageOn, cfg, describeConfig, registrationOpen, sourceOf, updateConfig } from './config.js';
 import { db, now, type UserRow } from './db.js';
 import { env } from './env.js';
 import { pushEnabled } from './push.js';
@@ -225,7 +225,7 @@ export function registerAdmin(app: FastifyInstance, deps: AdminDeps): void {
         openInvites: count('SELECT COUNT(*) AS n FROM invites WHERE used_by IS NULL'),
       },
       storageBytes: s,
-      calls: { configured: livekitConfigured(), reachable: lk, url: cfg('livekitUrl') },
+      calls: { configured: livekitConfigured(), reachable: lk, url: sourceOf('livekitUrl') !== 'default' ? cfg('livekitUrl') : '(from the address clients use)' },
       push: { configured: pushEnabled() },
       secrets: { sessionSecretChanged: env.SESSION_SECRET !== 'dev-session-secret-change-me' },
     };

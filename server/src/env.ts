@@ -1,4 +1,5 @@
 import path from 'node:path';
+import './selfConfigure.js'; // first: fills in what was not given (see that file)
 import './config.js'; // applies the admin panel's saved settings to process.env before it is read below
 import { z } from 'zod';
 
@@ -37,6 +38,7 @@ const schema = z.object({
   // an account without a one-off invite code. Empty = invite codes only.
   REGISTRATION_KEY: z.string().default(''),
 });
+
 
 export const env = schema.parse(process.env);
 export const isProd = env.NODE_ENV === 'production';
