@@ -1,6 +1,7 @@
 import { ago, api, bytes, button, confirmBox, copy, day, h, megabytes, pageHead, pill, secretDialog, time, toast } from './ui.js';
 
-const table = (heads, rows, rightFrom = 99) => h('div', { class: 'table-wrap' }, h('table', null,
+const table = (heads, rows, rightFrom = 99, widths = null) => h('div', { class: 'table-wrap' }, h('table', { class: widths ? 'fixed' : '' },
+  widths ? h('colgroup', null, widths.map((w) => h('col', { style: `width:${w}` }))) : null,
   h('thead', null, h('tr', null, heads.map((t, i) => h('th', { class: i >= rightFrom ? 'r' : '' }, t)))), h('tbody', null, rows)));
 
 // ---------------------------------------------------------------------------------------------- invites
@@ -46,7 +47,7 @@ export async function backups(ctx) {
           h('td', { class: 'actions' }, button('Delete', { small: true, kind: 'danger', onclick: async () => {
             if (!(await confirmBox({ title: 'Delete this backup', text: `${f.name} belongs to ${u.username}. They may not be able to restore from it afterwards.`, yes: 'Delete', danger: true }))) return;
             try { await api(`/api/admin/backups/${u.userId}/${encodeURIComponent(f.name)}`, { method: 'DELETE' }); toast('Deleted'); ctx.render(); } catch (e) { toast(e.message, true); }
-          } }))))));
+          } })))), 99, ['46%', '14%', '28%', '12%']));
     }) : h('div', { class: 'panel' }, h('div', { class: 'empty' }, 'No backups')),
     list.length ? h('p', { class: 'hint num' }, `${bytes(total)} in total, ${list.length} ${list.length === 1 ? 'person' : 'people'}`) : null);
 }

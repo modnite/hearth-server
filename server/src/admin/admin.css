@@ -378,3 +378,89 @@ dialog { border-radius: var(--r-lg); box-shadow: 0 12px 40px rgba(0, 0, 0, .3); 
   .tile { padding: var(--s3) var(--s4); }
   .page-head h1 { font-size: 22px; }
 }
+
+
+/* ================================================================== alignment and small screens */
+/* Panels that sit side by side are the same height, and their content is spread the same way. */
+.cols { align-items: stretch; }
+.cols > .panel { display: flex; flex-direction: column; }
+.cols > .panel > :last-child { flex: 1; }
+.cols > .panel > .kv { align-content: start; }
+.charts { align-content: center; height: 100%; }
+.storage { height: 100%; justify-content: center; }
+.tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.tile { min-width: 0; }
+.tile-body { min-width: 0; }
+.svcs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.svc:nth-child(3n) { border-right: 0; }
+.svc:nth-last-child(-n+3) { border-bottom: 0; }
+.svc-body { min-width: 0; }
+.svc .badge { flex: none; }
+.btn.icon-only .icon { width: 14px; height: 14px; }
+.panel > .ph .meta { display: inline-flex; align-items: center; gap: var(--s2); }
+th.r, td.r { text-align: right; }
+
+@media (max-width: 1100px) {
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .svcs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .svc:nth-child(3n) { border-right: 1px solid var(--line); }
+  .svc:nth-child(2n) { border-right: 0; }
+  .svc:nth-last-child(-n+3) { border-bottom: 1px solid var(--line); }
+  .svc:nth-last-child(-n+2) { border-bottom: 0; }
+}
+@media (max-width: 900px) {
+  .cols { grid-template-columns: minmax(0, 1fr); }
+  .charts { height: auto; }
+  .storage { height: auto; }
+}
+@media (max-width: 640px) {
+  .tiles { gap: var(--s3); }
+  .tile { flex-direction: column; align-items: flex-start; gap: var(--s2); padding: var(--s3) var(--s4); }
+  .tile-ico { width: 36px; height: 36px; }
+  .svcs { grid-template-columns: minmax(0, 1fr); }
+  .svc, .svc:nth-child(n) { border-right: 0; border-bottom: 1px solid var(--line); }
+  .svc:last-child { border-bottom: 0; }
+  .page-head { flex-wrap: wrap; }
+  .page-actions { flex-wrap: wrap; }
+  .toolbar .grow { flex-basis: 100%; }
+  .search .input { max-width: none; }
+  .storage { flex-direction: column; align-items: stretch; }
+  .ring-wrap { align-self: center; }
+  .kv { grid-template-columns: minmax(0, 1fr); }
+  .kv > .k { padding-bottom: 0; border-bottom: 0; }
+  .kv > div:nth-last-child(2) { border-bottom: 0; }
+  .setting .head { min-height: 0; }
+
+  /* a table row becomes a card: heading on the left, value on the right */
+  table.stack thead { display: none; }
+  table.stack, table.stack tbody { display: block; }
+  table.stack tr { display: block; padding: var(--s2) var(--s4); border-bottom: 1px solid var(--line); }
+  table.stack tbody tr:last-child { border-bottom: 0; }
+  table.stack td { display: flex; justify-content: space-between; align-items: center; gap: var(--s3); padding: 6px 0; border: 0; text-align: right; }
+  table.stack td[data-label]::before { content: attr(data-label); color: var(--muted); font-size: var(--t-sm); text-align: left; flex: none; }
+  table.stack td.actions { justify-content: flex-end; padding-top: var(--s2); }
+  table.stack td.actions::before { content: none; }
+  table.stack td:first-child { justify-content: flex-start; font-weight: 600; padding-top: var(--s2); }
+  table.stack td:first-child::before { content: none; }
+  .route { grid-template-columns: 52px minmax(0, 1fr); }
+  .sheet { width: calc(100vw - 24px); }
+  .manage .row { grid-template-columns: minmax(0, 1fr); gap: var(--s2); }
+}
+
+a.btn { text-decoration: none; }
+a.btn:hover { color: var(--ink); }
+table.fixed { table-layout: fixed; }
+table.fixed td { overflow-wrap: anywhere; }
+.steps .step { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: var(--s2) var(--s4); min-height: 48px; border-bottom: 1px solid var(--line); }
+.steps .step:last-child { border-bottom: 0; }
+.steps .step.done { color: var(--muted); }
+.steps .step-t { min-width: 0; }
+textarea.input { height: auto; min-height: 60px; padding: 8px 12px; resize: vertical; line-height: 1.45; font: inherit; }
+@media (max-width: 640px) {
+  .toolbar select.input { width: 100% !important; }
+  table.stack td > span { text-align: right; }
+  table.fixed { table-layout: auto; }
+  .steps .step { flex-wrap: wrap; }
+}
+
+.spark .line, .spark .grid { vector-effect: non-scaling-stroke; }

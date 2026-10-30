@@ -77,6 +77,7 @@ export async function overview(ctx) {
         service({ ico: 'push', title: 'Push notifications', state: s.push.configured ? 'On' : 'Off', kind: s.push.configured ? 'good' : 'off', line: 'Browsers and PWAs' }),
         service({ ico: 'backups', title: 'Backups kept here', state: info.features.backups ? 'On' : 'Off', kind: info.features.backups ? 'good' : 'off', line: `${Math.round(info.limits.backupQuotaMb / 1024 * 10) / 10} GB for each person` }),
         service({ ico: 'browser', title: 'Browser proxy', state: info.features.browser ? 'On' : 'Off', kind: info.features.browser ? 'good' : 'off', line: 'For signed-in people' }),
+        service({ ico: 'shield', title: 'Session secret', state: s.secrets.sessionSecretChanged ? 'Set' : 'Default', kind: s.secrets.sessionSecretChanged ? 'good' : 'warn', line: s.secrets.sessionSecretChanged ? 'Not the built-in value' : 'Change it' }),
         service({ ico: 'user', title: 'Registration', state: info.registration === 'open' ? 'Open' : 'Invite', kind: info.registration === 'open' ? 'warn' : 'good', line: info.houseKey ? 'A house key is set' : 'Invite codes' }))),
 
     h('div', { class: 'cols' },
@@ -89,8 +90,8 @@ export async function overview(ctx) {
           ['Data folder', h('code', null, s.dataDir)],
         ])),
       showList ? h('div', { class: 'panel' },
-        h('div', { class: 'ph' }, 'Setup', h('span', { class: 'meta' }, `${doneCount} of ${steps.length} done `, h('button', { type: 'button', class: 'link', onclick: () => { try { localStorage.setItem(DISMISSED, '1'); } catch { /* ignore */ } ctx.render(); } }, 'Hide'))),
+        h('div', { class: 'ph' }, 'Setup', h('span', { class: 'meta' }, `${doneCount} of ${steps.length}`, h('button', { type: 'button', class: 'btn quiet sm icon-only', title: 'Dismiss', 'aria-label': 'Dismiss the setup list', onclick: () => { try { localStorage.setItem(DISMISSED, '1'); } catch { /* ignore */ } ctx.render(); } }, icon('close')))),
         h('div', { class: 'meter' }, h('span', { style: `width:${(doneCount / steps.length) * 100}%` })),
-        h('div', { class: 'table-wrap' }, h('table', null, h('tbody', null, steps.map((x) => h('tr', { class: x.done ? 'off' : '' }, h('td', null, x.done ? '✓ ' : '☐ ', x.t), h('td', { class: 'actions' }, !x.done && x.go ? button(x.go[0], { small: true, onclick: x.go[1] }) : null))))))) : h('div', { class: 'panel' }, h('div', { class: 'ph' }, 'Counts'),
+        h('div', { class: 'steps' }, steps.map((x) => h('div', { class: 'step' + (x.done ? ' done' : '') }, h('span', { class: 'step-t' }, x.done ? '\u2713 ' : '\u2610 ', x.t), !x.done && x.go ? button(x.go[0], { small: true, onclick: x.go[1] }) : null)))) : h('div', { class: 'panel' }, h('div', { class: 'ph' }, 'Counts'),
         kv([['People', String(s.counts.users)], ['Signed in now', String(s.counts.signedIn)], ['Chats and rooms', String(s.counts.rooms)], ['Messages', String(s.counts.messages)], ['Files shared', String(s.counts.attachments)]]))));
 }

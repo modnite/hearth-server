@@ -119,6 +119,20 @@ const ctx = {
   afterRender(fn) { after.push(fn); },
 };
 
+/** Each table cell remembers its column heading, so on a phone a row can be shown as a card with the heading beside each value. */
+function labelCells(root) {
+  for (const table of root.querySelectorAll('table')) {
+    const heads = [...table.querySelectorAll('thead th')].map((th) => th.textContent.trim());
+    if (!heads.length) continue;
+    table.classList.add('stack');
+    for (const tr of table.querySelectorAll('tbody tr')) [...tr.children].forEach((td, i) => {
+      if (!heads[i]) return;
+      td.setAttribute('data-label', heads[i]);
+      if (td.childNodes.length > 1 && !td.querySelector('button')) { const span = document.createElement('span'); span.append(...td.childNodes); td.append(span); }
+    });
+  }
+}
+
 let renderToken = 0;
 async function render(keepScroll = false) {
   const token = ++renderToken;
@@ -133,6 +147,7 @@ async function render(keepScroll = false) {
     const el = await tab.view(ctx);
     if (token !== renderToken) return;
     content.replaceChildren(...el.childNodes);
+    labelCells(content);
     window.scrollTo(0, y);
     for (const fn of after.splice(0)) { try { fn(); } catch { /* a view's tidy-up must not break the page */ } }
   } catch (err) {

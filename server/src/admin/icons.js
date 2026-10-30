@@ -13,6 +13,8 @@ const P = {
   database: '<ellipse cx="8" cy="4" rx="5" ry="2"/><path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>',
   server: '<rect x="2" y="3" width="12" height="4" rx="1"/><rect x="2" y="9" width="12" height="4" rx="1"/><path d="M4.5 5h.01M4.5 11h.01"/>',
   msg: '<path d="M3 3.5h10a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H8l-3 2.5v-2.5H3a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1z"/>',
+  close: '<path d="M4 4l8 8M12 4l-8 8"/>',
+  shield: '<path d="M8 1.8l5 2v4.2c0 3-2 5.2-5 6.2-3-1-5-3.2-5-6.2V3.8z"/>',
   menu: '<path d="M2.5 4h11M2.5 8h11M2.5 12h11"/>',
   user: '<circle cx="8" cy="5.5" r="2.5"/><path d="M3 13.5c.5-2.6 2.6-3.8 5-3.8s4.5 1.2 5 3.8"/>',
   logout: '<path d="M6.5 3H4a1.5 1.5 0 0 0-1.5 1.5v7A1.5 1.5 0 0 0 4 13h2.5M10 5l3 3-3 3M13 8H6"/>',

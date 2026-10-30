@@ -85,7 +85,8 @@ export async function settings(ctx) {
         ctl = h('div', { style: 'display:grid;gap:6px;width:100%' }, h('div', { class: 'input-wrap' }, input, unit ? h('span', { class: 'suffix' }, unit) : null), unit ? f.unit : null);
         if (!unit) f.unit = null;
       } else {
-        const input = h('input', { class: 'input' + (/url|key|public/i.test(s.key) ? ' mono' : ''), id, type: 'text', autocomplete: 'off', spellcheck: 'false', value: v, oninput: (e) => set(s, e.target.value) });
+        const long = s.key === 'motd';
+        const input = h(long ? 'textarea' : 'input', { class: 'input' + (/url|key|public/i.test(s.key) ? ' mono' : '') + (long ? ' area' : ''), id, type: long ? null : 'text', rows: long ? 2 : null, autocomplete: 'off', spellcheck: long ? 'true' : 'false', placeholder: 'Not set', value: v, oninput: (e) => set(s, e.target.value) });
         f.input = input;
         ctl = input;
       }

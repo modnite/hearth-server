@@ -4,7 +4,7 @@ const el = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (c
 
 /** A line over time. `points` are numbers; the line fills down to the bottom. */
 export function sparkline(points, { width = 240, height = 56, min = 0, max } = {}) {
-  const svg = el('svg', { viewBox: `0 0 ${width} ${height}`, class: 'spark', role: 'img', 'aria-label': 'History' });
+  const svg = el('svg', { viewBox: `0 0 ${width} ${height}`, class: 'spark', role: 'img', 'aria-label': 'History', preserveAspectRatio: 'none' });
   const data = points.length > 1 ? points : [points[0] ?? 0, points[0] ?? 0];
   const hi = max ?? Math.max(1, ...data) * 1.15;
   const x = (i) => (i / (data.length - 1)) * width;
