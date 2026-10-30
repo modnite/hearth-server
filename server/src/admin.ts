@@ -12,6 +12,7 @@ import { pushEnabled } from './push.js';
 import { FailureLimiter } from './ratelimit.js';
 import { friendCodeOf, USERNAME_RULE, validUsername } from './social.js';
 import { listBackups, usedBytes, validBackupName } from './serverBackups.js';
+import { isTotpOn } from './totp.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -139,7 +140,7 @@ const colorFor = (seed: string): string => {
   return palette[hash % palette.length]!;
 };
 
-const MIME: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
+const MIME: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8' };
 
 /** Remember every route as it is added, so the panel and the API docs can list what clients may call. */
 export function collectRoutes(app: FastifyInstance): Array<{ method: string; url: string }> {
@@ -264,6 +265,8 @@ export function registerAdmin(app: FastifyInstance, deps: AdminDeps): void {
     id: u.id,
     username: u.username,
     displayName: u.display_name,
+    avatarColor: u.avatar_color,
+    twoStep: isTotpOn(u.id),
     createdAt: u.created_at,
     isAdmin: Boolean(u.is_admin),
     disabled: Boolean(u.disabled),
@@ -437,10 +440,10 @@ export function registerAdmin(app: FastifyInstance, deps: AdminDeps): void {
     const file = path.join(adminDir, name);
     if (!file.startsWith(adminDir + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) return reply.code(404).send({ error: 'not found' });
     return reply
-      .header('content-security-policy', "default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
+      .header('content-security-policy', "default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
       .header('x-content-type-options', 'nosniff')
       .header('referrer-policy', 'no-referrer')
-      .header('cache-control', 'no-cache')
+      .header('cache-control', path.extname(file) === '.woff2' ? 'public, max-age=31536000, immutable' : 'no-cache')
       .type(MIME[path.extname(file)] ?? 'application/octet-stream')
       .send(fs.createReadStream(file));
   };

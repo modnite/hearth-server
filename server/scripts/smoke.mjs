@@ -59,7 +59,7 @@ await check('the server answers and says what it is', async () => {
 });
 
 await check('the admin panel and its files are served', async () => {
-  for (const p of ['/admin', '/admin/admin.js', '/admin/admin.css']) {
+  for (const p of ['/admin', '/admin/admin.js', '/admin/admin.css', '/admin/ui.js', '/admin/icons.js', '/admin/v-settings.js', '/admin/inter.woff2', '/admin/mono.woff2']) {
     const r = await anon.call(p);
     assert.equal(r.status, 200, p);
     assert.match(r.headers.get('content-security-policy') || '', /default-src 'self'/);

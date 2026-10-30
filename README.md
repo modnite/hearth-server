@@ -31,6 +31,13 @@ For your own domain with HTTPS, and for voice and video, see [docs/DEPLOY.md](do
 
 ## The admin panel (`/admin`)
 
+![The overview, dark theme](docs/screenshots/overview-dark.png)
+
+<p>
+<img src="docs/screenshots/people-dark.png" alt="Managing a person" width="49%">
+<img src="docs/screenshots/settings-light.png" alt="Settings, light theme" width="49%">
+</p>
+
 | Tab | What it does |
 |---|---|
 | Overview | Connect address, people and message counts, storage, whether calls and push work, warnings (default secret, open registration), restart button |
