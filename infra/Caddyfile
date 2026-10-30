@@ -1,0 +1,10 @@
+# HTTPS front door for the "tls" profile. Caddy gets and renews the certificate for HEARTH_DOMAIN by itself.
+# LiveKit's signalling websocket lives under /rtc; media never passes through Caddy.
+{$HEARTH_DOMAIN} {
+	encode zstd gzip
+
+	@livekit path /rtc /rtc/*
+	reverse_proxy @livekit host.docker.internal:7880
+
+	reverse_proxy hearth:8080
+}

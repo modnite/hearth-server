@@ -1,0 +1,54 @@
+# Rendered by scripts/render-livekit.sh into infra/livekit.yaml. Edit this template, not the result.
+#
+# This is the whole no-STUN / no-TURN story, in one file:
+#   * use_external_ip: false  -> LiveKit never talks to a STUN server.
+#   * node_ip: __NODE_IP__    -> we tell it our WAN IP ourselves (from an HTTPS lookup).
+#   * stun_servers: []        -> no extra STUN servers (and the browser discards
+#                               LiveKit's built-in fallback list — see below).
+#   * turn.enabled: false     -> no TURN server, embedded or external.
+#   * advertise_internal_ip   -> LAN clients also get the LAN address, so home
+#                               routers never need NAT hairpin/loopback.
+
+port: 7880
+log_level: info
+
+rtc:
+  tcp_port: __TCP_PORT__
+  port_range_start: __UDP_START__
+  port_range_end: __UDP_END__
+  use_external_ip: false
+  node_ip: __NODE_IP__
+  advertise_internal_ip: true
+  use_mdns: false
+  # No extra STUN servers. A client that wants the same promise passes
+  # `iceServers: []` when it connects, so no STUN or TURN is ever contacted.
+  stun_servers: []
+  # ICE-over-TCP is tried automatically when UDP fails. This is plain WebRTC,
+  # not TURN, so the no-TURN promise holds even on UDP-hostile networks.
+  allow_tcp_fallback: true
+
+turn:
+  enabled: false
+
+keys:
+  __API_KEY__: __API_SECRET__
+
+# Who counts as "speaking" on the server. The level is a 0-127 scale where 0 is
+# the LOUDEST, so a bigger number lets quieter voices count.
+audio:
+  active_level: 50
+  min_percentile: 20
+  update_interval: 200
+  smooth_intervals: 2
+
+room:
+  auto_create: true
+  # A voice room lingers a while after the last person leaves, so it feels
+  # "always on" rather than spinning up and down.
+  empty_timeout: 3600
+  departure_timeout: 120
+  max_participants: 20
+  playout_delay:
+    enabled: true
+    min: 60
+    max: 1000
