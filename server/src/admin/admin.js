@@ -4,6 +4,7 @@ import { activity, backups, build, invites } from './v-more.js';
 import { overview } from './v-overview.js';
 import { people } from './v-people.js';
 import { settings } from './v-settings.js';
+import { icon } from './icons.js';
 import { api, button, h, skeleton, theme } from './ui.js';
 
 theme.apply();
@@ -12,13 +13,13 @@ const app = document.getElementById('app');
 const state = { info: null, me: null, tab: 'overview', counts: { users: null, invites: null } };
 
 const TABS = [
-  { id: 'overview', label: 'Overview', group: 'Server', view: overview },
-  { id: 'settings', label: 'Settings', group: 'Server', view: settings },
-  { id: 'people', label: 'People', group: 'People', view: people, count: 'users' },
-  { id: 'invites', label: 'Invites', group: 'People', view: invites, count: 'invites' },
-  { id: 'backups', label: 'Backups', group: 'Operate', view: backups },
-  { id: 'activity', label: 'Activity', group: 'Operate', view: activity },
-  { id: 'build', label: 'For client builders', group: 'Operate', view: build },
+  { id: 'overview', ico: 'overview', label: 'Overview', group: 'Server', view: overview },
+  { id: 'settings', ico: 'settings', label: 'Settings', group: 'Server', view: settings },
+  { id: 'people', ico: 'people', label: 'People', group: 'People', view: people, count: 'users' },
+  { id: 'invites', ico: 'invites', label: 'Invites', group: 'People', view: invites, count: 'invites' },
+  { id: 'backups', ico: 'backups', label: 'Backups', group: 'Operate', view: backups },
+  { id: 'activity', ico: 'activity', label: 'Activity', group: 'Operate', view: activity },
+  { id: 'build', ico: 'code', label: 'For client builders', group: 'Operate', view: build },
 ];
 const byId = (id) => TABS.find((t) => t.id === id);
 
@@ -78,7 +79,7 @@ function navLinks() {
   for (const t of TABS) {
     if (t.group !== g) { g = t.group; out.push(h('div', { class: 'group' }, g)); }
     out.push(h('a', { href: `#${t.id}`, 'aria-current': state.tab === t.id ? 'page' : false, 'data-tab': t.id, onclick: () => sideEl.classList.remove('open') },
-      t.label, t.count && state.counts[t.count] != null ? h('span', { class: 'count num' }, String(state.counts[t.count])) : null));
+      icon(t.ico), t.label, t.count && state.counts[t.count] != null ? h('span', { class: 'count num' }, String(state.counts[t.count])) : null));
   }
   return out;
 }
@@ -149,7 +150,7 @@ function route() {
 window.addEventListener('hashchange', () => { if (state.me) route(); });
 
 // the overview stays current while it is on screen
-setInterval(() => { if (state.me && state.tab === 'overview' && !document.hidden && !document.querySelector('dialog[open]')) render(true); }, 30000);
+setInterval(() => { if (state.me && state.tab === 'overview' && !document.hidden && !document.querySelector('dialog[open]')) render(true); }, 10000);
 
 // ---------------------------------------------------------------------------------------------- start
 async function boot() {

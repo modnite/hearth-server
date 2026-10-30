@@ -54,7 +54,7 @@ export async function people(ctx) {
     listHost.replaceChildren(h('table', null,
       h('thead', null, h('tr', null, ['Username', 'Name', 'Role', 'Joined', 'Last signed in', 'Messages', 'Backups', ''].map((t, i) => h('th', { class: i > 4 ? 'r' : '' }, t)))),
       h('tbody', null, shown.map((u) => h('tr', { class: u.disabled ? 'off' : '' },
-        h('td', null, u.username, u.id === me.id ? ' ' : '', u.id === me.id ? pill('you') : null),
+        h('td', null, h('span', { class: 'avatar', style: `background:${u.avatarColor || ''}` }, (u.displayName || u.username).trim().slice(0, 2).toUpperCase()), u.username, u.id === me.id ? ' ' : '', u.id === me.id ? pill('you') : null),
         h('td', null, u.displayName),
         h('td', null, u.isAdmin ? 'Administrator' : 'Member', u.disabled ? [' ', pill('off', 'bad')] : null, u.twoStep ? [' ', pill('2FA', 'good')] : null),
         h('td', { class: 'num' }, joined(u.createdAt)),

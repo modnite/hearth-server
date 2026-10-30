@@ -51,7 +51,7 @@ Data is in two Docker volumes, `hearth_data` (the database, files, backups, pane
 | Activity | What administrators did |
 | For client builders | The server's capabilities and the full route list |
 
-A plain system-administration page, served by the server itself: no build step, no outside requests, light and dark, usable on a phone.
+A system-administration page in the style of OMV and Cockpit, served by the server itself: dark sidebar, stat tiles, live graphs, status badges and tables. No build step, no outside requests, light and dark, usable on a phone.
 
 ## What is in the box
 
