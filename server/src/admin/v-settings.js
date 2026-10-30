@@ -1,15 +1,6 @@
 import { icon } from './icons.js';
 import { api, button, h, megabytes, pageHead, pill, toast } from './ui.js';
 
-const BLURB = {
-  Server: 'How this server introduces itself.',
-  Joining: 'Who may create an account, and how.',
-  Backups: 'Room on this server for the sealed backups people keep here. The server cannot read them.',
-  Features: 'Things this server does for signed-in people.',
-  Calls: 'Voice and video through a LiveKit server.',
-  Notifications: 'Notifications for browsers and PWAs when they are not open.',
-};
-
 /** Checks a value the way the server will, so a mistake shows next to the field at once. */
 function check(s, v) {
   if (s.type === 'number') {
@@ -91,7 +82,6 @@ export async function settings(ctx) {
       h('div', { class: 'head' }, h('label', { class: 'name', for: `s-${s.key}` }, s.label.replace(/ \(MB\)$/, '')),
         s.source === 'panel' ? pill('Set here', 'accent') : s.source === 'environment' ? pill('From environment') : null,
         s.live ? null : pill('Needs restart', 'warn')),
-      h('p', { class: 'hint' }, s.help),
       s.source === 'panel' ? h('div', { class: 'links' }, h('button', { type: 'button', class: 'link', onclick: async () => {
         try { await api('/api/admin/config', { method: 'PUT', body: { changes: { [s.key]: null } } }); toast('Back to the environment value'); ctx.render(); } catch (e) { toast(e.message, true); }
       } }, 'Use the environment value')) : null),
@@ -119,7 +109,7 @@ export async function settings(ctx) {
   }
 
   const sections = groups.map((g) => h('section', { class: 'group-block', id: `g-${g}`, 'data-group': g },
-    h('h2', null, g), h('p', null, BLURB[g] || ''), h('div', { class: 'panel divided' }, list.filter((s) => s.group === g).map(row))));
+    h('h2', null, g), h('div', { class: 'panel divided' }, list.filter((s) => s.group === g).map(row))));
 
   saveBtn = h('button', { type: 'button', class: 'btn primary', onclick: save }, 'Save changes');
   discardBtn = h('button', { type: 'button', class: 'btn quiet', onclick: () => ctx.render() }, 'Discard');
@@ -139,6 +129,6 @@ export async function settings(ctx) {
   refreshBar();
 
   return h('div', { class: 'page fade' },
-    pageHead({ eyebrow: 'Configuration', title: 'Settings', lead: 'Saved on the server in its data folder. A value set here wins over the environment, and "Use the environment value" puts it back.' }),
+    pageHead({ title: 'Settings' }),
     h('div', { class: 'settings' }, toc, h('div', null, sections)));
 }

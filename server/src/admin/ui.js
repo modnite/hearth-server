@@ -154,10 +154,10 @@ export function skeleton(rows = 4) {
   return h('div', { class: 'panel' }, Array.from({ length: rows }, (_, i) => h('div', { style: 'padding:16px 24px;border-top:' + (i ? '1px solid var(--line)' : '0') }, h('div', { class: 'skel', style: `height:14px;width:${40 + ((i * 17) % 40)}%` }), h('div', { class: 'skel', style: 'height:11px;width:30%;margin-top:10px;opacity:.7' }))));
 }
 
-export function pageHead({ eyebrow, title, lead, actions }) {
-  return h('header', { class: 'page-head' }, h('div', null, h('div', { class: 'eyebrow' }, eyebrow), h('h1', null, title), lead ? h('p', null, lead) : null), actions ? h('div', { class: 'page-actions' }, actions) : null);
+export function pageHead({ title, actions }) {
+  return h('header', { class: 'page-head' }, h('h1', null, title), actions ? h('div', { class: 'page-actions' }, actions) : null);
 }
 
-export function emptyState({ icon: ic, title, text, action }) {
-  return h('div', { class: 'empty' }, h('div', { class: 'ring' }, icon(ic, 'lg')), h('strong', null, title), text ? h('p', null, text) : null, action || null);
+export function emptyState({ title, action }) {
+  return h('div', { class: 'empty' }, h('strong', null, title), action || null);
 }

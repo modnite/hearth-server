@@ -56,17 +56,13 @@ function gate(setup) {
     }
   } },
     h('div', { class: 'field' }, h('label', { class: 'label', for: 'u' }, 'Username'), user),
-    h('div', { class: 'field' }, h('label', { class: 'label', for: 'p' }, 'Password'), h('div', { class: 'input-wrap' }, pass, reveal), setup ? [strength, h('span', { class: 'hint' }, '8 or more characters. A phrase of a few words is easy to remember and hard to guess.')] : null),
+    h('div', { class: 'field' }, h('label', { class: 'label', for: 'p' }, 'Password'), h('div', { class: 'input-wrap' }, pass, reveal), setup ? strength : null),
     setup ? h('div', { class: 'field' }, h('label', { class: 'label', for: 'p2' }, 'Repeat the password'), again) : null,
     codeField, msg, submit);
 
-  app.replaceChildren(h('div', { class: 'gate' },
-    h('aside', { class: 'gate-art' },
-      h('div', { class: 'brand' }, mark(), h('div', { class: 'txt' }, h('div', { class: 'name' }, state.info.name), h('div', { class: 'sub' }, `Hearth server ${state.info.version}`))),
-      h('div', null, h('h2', null, setup ? 'Your server is ready.' : 'Welcome back.'), h('p', null, setup ? 'Make the first account. It becomes the administrator, and from then on you invite everyone else.' : 'Sign in with an administrator account to manage this server.')),
-      h('small', null, 'Self-hosted. Your messages, files and backups stay on your own machine.')),
-    h('main', { class: 'gate-form' }, h('div', { class: 'gate-card' },
-      h('div', null, h('h1', null, setup ? 'Create the administrator' : 'Administrator sign-in'), h('p', { class: 'lead' }, setup ? 'You only do this once.' : state.info.motd || 'Only administrators can open this panel.')), form))));
+  app.replaceChildren(h('main', { class: 'gate' }, h('div', { class: 'gate-card' },
+    h('div', { class: 'brand' }, mark(), h('div', { class: 'txt' }, h('div', { class: 'name' }, state.info.name))),
+    h('h1', null, setup ? 'Create the administrator' : 'Sign in'), form)));
   user.focus();
 }
 

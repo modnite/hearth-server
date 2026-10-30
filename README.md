@@ -12,22 +12,25 @@ You do not have to run the one big Hearth server somebody else runs. Run your ow
 
 ## Run it in two minutes
 
-You need Docker with Compose.
+You need Docker with Compose, on Linux.
 
 ```sh
 git clone https://github.com/modnite/hearth-server
 cd hearth-server
-sh scripts/setup.sh          # writes .env with fresh random secrets
-docker compose up -d         # builds the image and starts the server
+sh scripts/setup.sh          # writes .env with fresh random secrets, and sets up voice and video
+docker compose up -d         # builds the image and starts the server and LiveKit
 ```
 
-Open <http://localhost:8080/admin>. The first time, it asks you to create the first administrator. Then:
+Open <http://localhost:8080/admin> and create the first administrator, then point your client at the address on the Overview tab.
 
-1. **Settings**: name the server, choose who may create accounts (invite only, or open), set a house key if you want a shared passphrase.
-2. **Invites**: make a code for each person.
-3. Point your client at the server address shown on the **Overview** tab.
+**Voice and video** run in LiveKit, which starts with the server on Linux. Two things have to be true for calls to work:
 
-For your own domain with HTTPS, and for voice and video, see [docs/DEPLOY.md](docs/DEPLOY.md).
+1. **Forward the ports.** On your router, forward `7881/tcp` and `50100-50199/udp` to this machine.
+2. **Use HTTPS.** Browsers only allow camera and microphone on HTTPS. Point a domain at the machine and add `--profile tls` (see [docs/DEPLOY.md](docs/DEPLOY.md)). Native apps such as Ember do not need this.
+
+No calls wanted, or on Docker Desktop (Windows, macOS), which has no host networking? Run `sh scripts/setup.sh --no-calls`; it is left off there automatically.
+
+> Calls between two real clients on this stack are not tested yet. Chat, groups, backups and the panel are.
 
 ## The admin panel (`/admin`)
 

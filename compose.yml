@@ -1,9 +1,11 @@
-# Hearth server. One command for the server, optional profiles for calls and HTTPS.
+# Hearth server. One command; voice and video (LiveKit) are included on Linux, HTTPS (Caddy) is a profile.
 #
-#   sh scripts/setup.sh                      # writes .env with fresh random secrets
-#   docker compose up -d                     # the server on http://localhost:8080 (open /admin to set it up)
-#   docker compose --profile calls up -d     # also run LiveKit for voice and video
+#   sh scripts/setup.sh                      # writes .env with fresh random secrets; on Linux it also turns calls on
+#   docker compose up -d                     # the server on http://localhost:8080 (open /admin to set it up), with LiveKit
 #   docker compose --profile tls up -d       # also run Caddy for HTTPS on your own domain
+#
+# Calls are on because setup.sh wrote COMPOSE_PROFILES=calls into .env. For no calls (or on Docker Desktop, which has no host
+# networking) run  sh scripts/setup.sh --no-calls  or delete that line, or start only the server:  docker compose up -d hearth
 #
 # Everything the server keeps (accounts, messages, files, backups, panel settings) is in the "hearth_data" volume.
 name: hearth
@@ -52,9 +54,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  # Voice and video. LiveKit runs on the host network so it can use the UDP range below.
-  # Forward on your router:  7881/tcp  and  ${LIVEKIT_UDP_RANGE_START}-${LIVEKIT_UDP_RANGE_END}/udp
-  # Render its config first:  sh scripts/render-livekit.sh
+  # Voice and video. LiveKit runs on the host network so it can use the UDP range below (Linux only).
+  # Forward on your router:  7881/tcp  and  50100-50199/udp   (setup.sh renders infra/livekit.yaml for it)
   livekit:
     <<: *common
     profiles: ["calls"]

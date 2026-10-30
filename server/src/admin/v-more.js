@@ -6,10 +6,6 @@ export async function invites(ctx) {
   const { invites: list } = await api('/api/admin/invites');
   const info = (ctx.state.info = await api('/api/server/info'));
   ctx.setCounts({ invites: list.filter((i) => !i.usedBy).length });
-  const mode = info.registration === 'open'
-    ? 'Registration is open, so people do not need a code. Codes still connect a new person to you as a contact.'
-    : info.houseKey ? 'A house key is set, so anyone who knows it can join. Codes are for one person each.' : 'People need an invite code to create an account.';
-
   const create = async () => {
     try {
       const r = await api('/api/admin/invites', { method: 'POST' });
@@ -19,7 +15,7 @@ export async function invites(ctx) {
   };
 
   return h('div', { class: 'page fade' },
-    pageHead({ eyebrow: 'People', title: 'Invites', lead: mode, actions: [button('Joining settings', { onclick: () => ctx.go('settings', 'Joining') }), button('Create an invite code', { kind: 'primary', icon: 'plus', onclick: create })] }),
+    pageHead({ title: 'Invites', actions: [button('Joining settings', { onclick: () => ctx.go('settings', 'Joining') }), button('Create an invite code', { kind: 'primary', icon: 'plus', onclick: create })] }),
     h('div', { class: 'panel' },
       list.length ? h('div', { class: 'divided' }, list.map((i) => h('div', { class: 'invite' },
         h('span', { class: 'code-chip' }, i.code, button('', { icon: 'copy', small: true, kind: 'quiet', title: 'Copy the code', onclick: () => copy(i.code, 'Code copied') })),
@@ -29,7 +25,7 @@ export async function invites(ctx) {
         i.usedBy ? h('span') : button('Revoke', { small: true, kind: 'danger', onclick: async () => {
           if (!(await confirmBox({ title: 'Revoke this code?', text: 'Nobody will be able to use it.', yes: 'Revoke', danger: true }))) return;
           try { await api(`/api/admin/invites/${encodeURIComponent(i.code)}`, { method: 'DELETE' }); toast('Revoked'); ctx.render(); } catch (e) { toast(e.message, true); }
-        } })))) : emptyState({ icon: 'invites', title: 'No invite codes yet', text: 'Make a code and give it to someone. Each code works for one person.', action: button('Create an invite code', { kind: 'primary', icon: 'plus', onclick: create }) })));
+        } })))) : emptyState({ title: 'No invite codes', action: button('Create an invite code', { kind: 'primary', icon: 'plus', onclick: create }) })));
 }
 
 // ---------------------------------------------------------------------------------------------- backups
@@ -37,7 +33,7 @@ export async function backups(ctx) {
   const { backups: list, quotaMb } = await api('/api/admin/backups');
   const total = list.reduce((n, u) => n + u.bytes, 0);
   return h('div', { class: 'page fade' },
-    pageHead({ eyebrow: 'Operate', title: 'Backups', lead: `Sealed backups people keep on this server. They are encrypted on the person's device, so you can store and delete them but never read them. Each person may keep up to ${megabytes(quotaMb)}.` }),
+    pageHead({ title: 'Backups' }),
     list.length ? h('div', { class: 'panel divided' }, list.map((u) => {
       const pct = Math.min(100, (u.bytes / (quotaMb * 1048576)) * 100);
       return h('div', { class: 'person-usage' },
@@ -49,7 +45,7 @@ export async function backups(ctx) {
             if (!(await confirmBox({ title: 'Delete this backup?', text: `${f.name} belongs to ${u.username}. They may not be able to restore from it afterwards.`, yes: 'Delete', danger: true }))) return;
             try { await api(`/api/admin/backups/${u.userId}/${encodeURIComponent(f.name)}`, { method: 'DELETE' }); toast('Deleted'); ctx.render(); } catch (e) { toast(e.message, true); }
           } })))));
-    })) : h('div', { class: 'panel' }, emptyState({ icon: 'backups', title: 'No backups yet', text: 'When someone backs up to this server from Ember, it shows up here.' })),
+    })) : h('div', { class: 'panel' }, emptyState({ title: 'No backups' })),
     list.length ? h('p', { class: 'hint num' }, `${bytes(total)} in total across ${list.length} ${list.length === 1 ? 'person' : 'people'}.`) : null);
 }
 
@@ -76,11 +72,11 @@ export async function activity() {
   const groups = [];
   for (const l of log) { const d = day(l.at); if (!groups.length || groups[groups.length - 1].d !== d) groups.push({ d, items: [] }); groups[groups.length - 1].items.push(l); }
   return h('div', { class: 'page fade' },
-    pageHead({ eyebrow: 'Operate', title: 'Activity', lead: 'What administrators did on this server, newest first.' }),
+    pageHead({ title: 'Activity' }),
     log.length ? h('div', { class: 'panel timeline' }, groups.map((g) => [h('div', { class: 'day' }, g.d), g.items.map((l, i) => {
       const [ic, kind, text, extra] = WHAT[l.action] || ['info', '', (x) => `${x.who}: ${x.action}`];
       return h('div', { class: 'event' + (i === g.items.length - 1 ? ' last' : '') }, h('span', { class: 'ico ' + kind }, icon(ic, 'sm')), h('div', { class: 't' }, text(l), extra && extra(l) ? [h('div', { class: 'hint mono' }, extra(l))] : null), h('span', { class: 'when' }, time(l.at)));
-    })])) : h('div', { class: 'panel' }, emptyState({ icon: 'activity', title: 'Nothing yet', text: 'Changes made from the panel are listed here.' })));
+    })])) : h('div', { class: 'panel' }, emptyState({ title: 'Nothing yet' })));
 }
 
 // ---------------------------------------------------------------------------------------------- for client builders
@@ -100,9 +96,9 @@ export async function build() {
   const caps = Object.entries(info.features);
 
   return h('div', { class: 'page fade' },
-    pageHead({ eyebrow: 'Operate', title: 'For client builders', lead: 'Everything a client does goes through this server\'s HTTP and WebSocket API. Ember and the Hearth web app are two clients of it. You can write another.', actions: h('a', { class: 'btn', href: 'https://github.com/modnite/hearth-server/blob/main/docs/API.md', target: '_blank', rel: 'noopener' }, icon('code', 'sm'), 'Read the guide') }),
+    pageHead({ title: 'For client builders', actions: h('a', { class: 'btn', href: 'https://github.com/modnite/hearth-server/blob/main/docs/API.md', target: '_blank', rel: 'noopener' }, icon('code', 'sm'), 'Read the guide') }),
     h('section', null,
-      h('div', { class: 'section-title' }, h('h2', null, 'What this server can do'), h('span', { class: 'meta' }, h('code', null, 'GET /api/server/info'), ' needs no sign-in')),
+      h('div', { class: 'section-title' }, h('h2', null, 'Capabilities'), h('span', { class: 'meta mono' }, 'GET /api/server/info')),
       h('div', { class: 'caps', style: 'margin-bottom:16px' }, caps.map(([k, v]) => h('div', { class: 'cap' }, h('span', { class: 'dot ' + (v ? 'good' : 'off') }), CAP[k] || k))),
       h('div', { class: 'codeblock' }, button('Copy', { small: true, icon: 'copy', onclick: () => copy(json, 'Copied') }), h('pre', null, json))),
     h('section', null,

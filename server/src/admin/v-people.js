@@ -57,12 +57,12 @@ export async function people(ctx) {
   }
 
   const action = ({ ic, t, d, onclick, disabled, danger }) =>
-    h('button', { type: 'button', class: 'act' + (danger ? ' danger' : ''), disabled, onclick }, icon(ic), h('span', null, h('span', { class: 't' }, t), h('span', { class: 'd' }, d)));
+    h('button', { type: 'button', class: 'act' + (danger ? ' danger' : ''), disabled, onclick }, icon(ic), h('span', null, h('span', { class: 't' }, t), disabled ? h('span', { class: 'd' }, d) : null));
 
   function paint() {
     const shown = users.filter(matches);
-    if (!users.length) { listHost.replaceChildren(emptyState({ icon: 'people', title: 'Nobody here yet', text: 'Invite people from the Invites page.' })); return; }
-    if (!shown.length) { listHost.replaceChildren(emptyState({ icon: 'search', title: 'No one matches', text: 'Try a different name, or clear the filter.' })); return; }
+    if (!users.length) { listHost.replaceChildren(emptyState({ title: 'Nobody here yet' })); return; }
+    if (!shown.length) { listHost.replaceChildren(emptyState({ title: 'No one matches' })); return; }
     listHost.replaceChildren(
       h('div', { class: 'list-head', 'aria-hidden': 'true' }, h('span', null, 'Person'), h('span', null, 'Joined'), h('span', null, 'Last signed in'), h('span', { class: 'r' }, 'Messages'), h('span', { class: 'r' }, 'Backups'), h('span')),
       h('div', { class: 'divided' }, shown.map((u) => h('button', { type: 'button', class: 'row-person' + (u.disabled ? ' off' : ''), onclick: () => openPerson(u), 'aria-label': `${u.displayName}, open details` },
@@ -83,7 +83,7 @@ export async function people(ctx) {
   paint();
 
   return h('div', { class: 'page fade' },
-    pageHead({ eyebrow: 'People', title: 'People', lead: 'Everyone with an account on this server. Select a person to manage them.', actions: button('Invite someone', { kind: 'primary', icon: 'plus', onclick: () => ctx.go('invites') }) }),
+    pageHead({ title: 'People', actions: button('Invite someone', { kind: 'primary', icon: 'plus', onclick: () => ctx.go('invites') }) }),
     h('div', null,
       h('div', { class: 'toolbar' }, h('div', { class: 'search' }, icon('search'), search), chips),
       h('div', { class: 'panel' }, listHost)));

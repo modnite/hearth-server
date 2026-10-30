@@ -9,7 +9,7 @@ function stat(n, label) {
 }
 
 function service({ ico, title, text, on, label }) {
-  return h('div', { class: 'svc' }, h('span', { class: 'ico' }, icon(ico)), h('div', null, h('div', { class: 't' }, title), h('div', { class: 'd' }, text)),
+  return h('div', { class: 'svc' }, h('span', { class: 'ico' }, icon(ico)), h('div', null, h('div', { class: 't' }, title)),
     h('span', { class: 'pill ' + (on === true ? 'good' : on === 'bad' ? 'bad' : '') }, h('span', { class: 'dot' }), label));
 }
 
@@ -26,11 +26,11 @@ export async function overview(ctx) {
   if (info.registration === 'open') banners.push({ text: 'Anyone who can reach this server can create an account.', action: ['Change this', () => ctx.go('settings', 'Joining')] });
 
   const steps = [
-    { done: true, t: 'Create the administrator', d: 'You did this at setup.' },
-    { done: info.name !== 'Hearth', t: 'Name your server', d: 'People see the name on the sign-in screen of every client.', go: ['Open settings', () => ctx.go('settings', 'Server')] },
-    { done: s.counts.users > 1, t: 'Invite your first person', d: 'Make an invite code, or set a house key people can use.', go: ['Invite', () => ctx.go('invites')] },
-    { done: s.calls.configured, t: 'Set up voice and video', d: 'Needs a LiveKit server. Optional.', go: ['Calls settings', () => ctx.go('settings', 'Calls')] },
-    { done: s.push.configured, t: 'Turn on notifications', d: 'Browser and PWA push needs a pair of keys. Optional.', go: ['Notification settings', () => ctx.go('settings', 'Notifications')] },
+    { done: true, t: 'Create the administrator' },
+    { done: info.name !== 'Hearth', t: 'Name your server', go: ['Open settings', () => ctx.go('settings', 'Server')] },
+    { done: s.counts.users > 1, t: 'Invite your first person', go: ['Invite', () => ctx.go('invites')] },
+    { done: s.calls.configured, t: 'Set up voice and video', go: ['Calls settings', () => ctx.go('settings', 'Calls')] },
+    { done: s.push.configured, t: 'Turn on notifications', go: ['Notification settings', () => ctx.go('settings', 'Notifications')] },
   ];
   const doneCount = steps.filter((x) => x.done).length;
   const showList = !dismissed() && doneCount < steps.length;
@@ -43,14 +43,13 @@ export async function overview(ctx) {
   ];
 
   return h('div', { class: 'page fade' },
-    pageHead({ eyebrow: 'Overview', title: info.name, lead: 'How your server is doing right now.' }),
+    pageHead({ title: info.name }),
     banners.length ? h('div', { class: 'banners' }, banners.map((b) => h('div', { class: 'banner warn', role: 'note' }, icon('alert'), h('div', { class: 'grow' }, b.text), b.action ? button(b.action[0], { small: true, onclick: b.action[1] }) : null))) : null,
 
     h('section', { class: 'hero' },
       h('div', null,
         h('div', { class: 'status' }, h('span', { class: 'dot good' }), 'Running'),
-        h('h2', null, 'Connect a client'),
-        h('p', null, 'Give people this address. They enter it in Ember or any other Hearth client, then sign in or use an invite code.'),
+        h('h2', null, 'Server address'),
         h('div', { class: 'address' }, h('code', null, origin), h('button', { type: 'button', class: 'btn', onclick: () => copy(origin, 'Address copied') }, icon('copy', 'sm'), 'Copy'))),
       h('div', { class: 'facts' },
         h('div', { class: 'fact' }, h('div', { class: 'k' }, 'Version'), h('div', { class: 'v num' }, s.version)),
@@ -61,7 +60,7 @@ export async function overview(ctx) {
       h('div', { class: 'section-title' }, h('h2', null, 'Get started'), h('span', { class: 'meta num' }, `${doneCount} of ${steps.length} done`, ' ', h('button', { type: 'button', class: 'link', onclick: () => { try { localStorage.setItem(DISMISSED, '1'); } catch { /* ignore */ } ctx.render(); } }, 'Hide'))),
       h('div', { class: 'panel' },
         h('div', { class: 'progress' }, h('span', { style: `width:${(doneCount / steps.length) * 100}%` })),
-        h('div', { class: 'divided' }, steps.map((x) => h('div', { class: 'step' + (x.done ? ' done' : '') }, h('span', { class: 'tick' }, icon('check', 'sm')), h('div', null, h('div', { class: 't' }, x.t), h('div', { class: 'd' }, x.d)), !x.done && x.go ? button(x.go[0], { small: true, onclick: x.go[1] }) : null))))) : null,
+        h('div', { class: 'divided' }, steps.map((x) => h('div', { class: 'step' + (x.done ? ' done' : '') }, h('span', { class: 'tick' }, icon('check', 'sm')), h('div', null, h('div', { class: 't' }, x.t)), !x.done && x.go ? button(x.go[0], { small: true, onclick: x.go[1] }) : null))))) : null,
 
     h('section', { class: 'stats' }, stat(s.counts.users, s.counts.users === 1 ? 'person' : 'people'), stat(s.counts.signedIn, 'signed in now'), stat(s.counts.rooms, s.counts.rooms === 1 ? 'chat or room' : 'chats and rooms'), stat(s.counts.messages, s.counts.messages === 1 ? 'message' : 'messages')),
 
@@ -72,7 +71,7 @@ export async function overview(ctx) {
           h('div', { class: 'usage-bar', role: 'img', 'aria-label': parts.map(([n, v]) => `${n} ${bytes(v)}`).join(', ') },
             total === 0 ? h('span', { class: 'empty' }) : parts.filter(([, v]) => v > 0).map(([, v, c]) => h('span', { style: `--c:${c};flex:${v} 1 0` }))),
           h('div', { class: 'legend' }, parts.map(([n, v, c]) => h('div', { class: 'item', style: `--c:${c}` }, h('span', { class: 'sw' }), h('span', null, n), h('span', { class: 'val' }, bytes(v))))),
-          h('p', { class: 'hint', style: 'margin-top:16px' }, 'All of it is in ', h('code', null, s.dataDir), '. Back that folder up and you have backed up the server.'))),
+          h('p', { class: 'hint mono', style: 'margin-top:16px' }, s.dataDir))),
       h('section', null,
         h('div', { class: 'section-title' }, h('h2', null, 'Services')),
         h('div', { class: 'panel divided' },
@@ -82,8 +81,7 @@ export async function overview(ctx) {
           service({ ico: 'globe', title: 'Built-in browser', text: info.features.browser ? 'This server fetches pages for signed-in people.' : 'Switched off.', on: info.features.browser, label: info.features.browser ? 'On' : 'Off' })))),
 
     h('footer', { class: 'foot' },
-      h('p', { class: 'hint num' }, `Node ${s.node} on ${s.platform}. API version ${s.apiVersion}.`,
-        s.supervised ? null : ' This server is not run by something that restarts it, so after changing a setting marked "Needs restart" you restart it yourself.'),
+      h('p', { class: 'hint num' }, `Node ${s.node} · ${s.platform} · API ${s.apiVersion}`),
       s.supervised ? button('Restart server', { kind: 'danger sm', icon: 'power', onclick: async () => {
         if (!(await confirmBox({ title: 'Restart the server?', text: 'People are disconnected for a few seconds and reconnect by themselves.', yes: 'Restart', danger: true }))) return;
         try { await api('/api/admin/restart', { method: 'POST' }); toast('Restarting. This page reconnects by itself.'); setTimeout(() => ctx.render(), 6000); } catch (e) { toast(e.message, true); }

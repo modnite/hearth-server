@@ -7,7 +7,7 @@ sh scripts/setup.sh
 docker compose up -d
 ```
 
-`setup.sh` writes `.env` with a random `SESSION_SECRET` and LiveKit secret. It never overwrites an existing `.env`. Everything in [`.env.example`](../.env.example) is optional except `SESSION_SECRET`.
+`setup.sh` writes `.env` with a random `SESSION_SECRET` and LiveKit secret, and turns voice and video on (Linux). It never overwrites an existing `.env`. Everything in [`.env.example`](../.env.example) is optional except `SESSION_SECRET`.
 
 The server listens on `8080` (`HEARTH_PORT`). Set `HEARTH_BIND=127.0.0.1` if a reverse proxy on the same machine is the only thing that should reach it.
 
@@ -29,22 +29,17 @@ Already have a reverse proxy (nginx, Traefik, Cloudflare Tunnel)? Skip the `tls`
 
 ## 3. Voice and video
 
-Calls use [LiveKit](https://livekit.io). The `calls` profile runs it next to the server.
+Calls use [LiveKit](https://livekit.io). `scripts/setup.sh` turns it on by writing `COMPOSE_PROFILES=calls` into `.env` and renders `infra/livekit.yaml` with this machine's public address (looked up over HTTPS, or set `PUBLIC_IP` first). Then a plain `docker compose up -d` starts it next to the server.
 
-```sh
-# in .env
-LIVEKIT_PUBLIC_URL=wss://chat.example.com      # with the tls profile; ws://YOUR-LAN-IP:7880 for home use only
-PUBLIC_IP=203.0.113.7                          # optional on a VPS; blank on a home line detects it
+Forward on your router: `7881/tcp` and `50100-50199/udp` (the range is `LIVEKIT_UDP_RANGE_START` and `_END`). If your public address changes, run `sh scripts/render-livekit.sh` again.
 
-sh scripts/render-livekit.sh                   # writes infra/livekit.yaml
-docker compose --profile calls up -d           # (add --profile tls for HTTPS)
-```
+`LIVEKIT_PUBLIC_URL` is what clients connect to. With a domain and the `tls` profile it is `wss://your-domain`; on a home network it is `ws://THIS-MACHINES-LAN-ADDRESS:7880`, which setup.sh fills in. Native apps work either way; browsers need HTTPS.
 
-Forward on your router: `7881/tcp` and `50100-50199/udp` (the range is `LIVEKIT_UDP_RANGE_START` and `_END`). LiveKit runs on the host network, which Docker Desktop on Windows and macOS does not support; on those, run LiveKit on a Linux machine and point `LIVEKIT_PUBLIC_URL` and `LIVEKIT_INTERNAL_URL` at it.
+LiveKit runs on the host network, which Docker Desktop (Windows, macOS) does not support. Setup leaves calls off there. To turn them off anywhere: `sh scripts/setup.sh --no-calls`, delete the `COMPOSE_PROFILES=calls` line from `.env`, or start only the server with `docker compose up -d hearth`. To run LiveKit on a separate Linux machine, point `LIVEKIT_PUBLIC_URL` and `LIVEKIT_INTERNAL_URL` at it.
 
-No STUN or TURN server is contacted by the server side. If your clients sit behind networks that block UDP entirely, LiveKit falls back to ICE-over-TCP on `7881`.
+No STUN or TURN server is contacted by the server side. If a client sits behind a network that blocks UDP entirely, LiveKit falls back to ICE-over-TCP on `7881`.
 
-The **Overview** tab of the panel shows whether calls are set up and whether the server can reach LiveKit.
+The **Overview** tab shows whether calls are set up and whether the server can reach LiveKit. Calls between two real clients on this stack are not tested yet.
 
 ## 4. Configuration: panel, environment, defaults
 
