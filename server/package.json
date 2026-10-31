@@ -1,6 +1,6 @@
 {
   "name": "hearth-server",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "The Hearth server: accounts, chats, calls, backups and an admin panel. Clients such as Ember or the Hearth web app talk to it over HTTP and WebSocket.",
   "license": "MIT",
   "private": true,

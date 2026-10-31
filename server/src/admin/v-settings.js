@@ -64,18 +64,25 @@ export async function settings(ctx) {
       } else if (s.type === 'choice') {
         ctl = h('div', { class: 'choice seg', role: 'radiogroup', 'aria-label': s.label }, s.choices.map((c) => h('label', null, h('input', { type: 'radio', name: id, value: c, checked: c === v, onchange: () => set(s, c) }), c)));
       } else if (s.type === 'secret') {
-        const wasSet = s.set && !clear.has(s.key);
-        const typing = v !== '' || !wasSet || f.replacing;
-        if (!typing) {
+        // One shape for every secret: a state badge and the actions that fit it. Not set: Set. Set: Replace, Clear. Typing: the box and Cancel.
+        const pending = clear.has(s.key);
+        const typing = v !== '' || f.replacing;
+        const edit = () => { f.replacing = true; f.render(); f.input?.focus(); };
+        if (pending && !typing) {
+          ctl = h('div', { class: 'secret-state' }, pill('Will be cleared', 'warn'),
+            button('Undo', { small: true, onclick: () => { clear.delete(s.key); f.render(); refreshBar(); } }));
+        } else if (!typing && s.set) {
           ctl = h('div', { class: 'secret-state' }, pill('Set', 'good'),
-            button('Replace', { small: true, onclick: () => { f.replacing = true; f.render(); f.input?.focus(); } }),
+            button('Replace', { small: true, onclick: edit }),
             button('Clear', { small: true, kind: 'danger', onclick: () => { clear.add(s.key); values.set(s.key, ''); f.render(); refreshBar(); } }));
+        } else if (!typing) {
+          ctl = h('div', { class: 'secret-state' }, pill('Not set'), button('Set', { small: true, onclick: edit }));
         } else {
-          const input = h('input', { class: 'input mono', id, type: 'password', autocomplete: 'new-password', spellcheck: 'false', value: v, placeholder: clear.has(s.key) ? 'Will be cleared on save' : 'Not set', oninput: (e) => set(s, e.target.value) });
+          const input = h('input', { class: 'input mono', id, type: 'password', autocomplete: 'new-password', spellcheck: 'false', value: v, oninput: (e) => set(s, e.target.value) });
           f.input = input;
           const reveal = h('button', { type: 'button', class: 'btn quiet sm reveal', title: 'Show or hide the value', onclick: () => { const show = input.type === 'password'; input.type = show ? 'text' : 'password'; reveal.textContent = show ? 'Hide' : 'Show'; } }, 'Show');
-          ctl = h('div', { class: 'input-wrap' }, input, reveal);
-          if (clear.has(s.key) || f.replacing) ctl = h('div', { style: 'display:grid;gap:8px;width:100%' }, ctl, h('button', { type: 'button', class: 'link', style: 'justify-self:start', onclick: () => { clear.delete(s.key); f.replacing = false; values.set(s.key, ''); errors.delete(s.key); f.render(); refreshBar(); } }, 'Keep the current value'));
+          ctl = h('div', { style: 'display:grid;gap:8px;width:100%' }, h('div', { class: 'input-wrap' }, input, reveal),
+            h('button', { type: 'button', class: 'link', style: 'justify-self:start', onclick: () => { f.replacing = false; values.set(s.key, ''); errors.delete(s.key); f.render(); refreshBar(); } }, 'Cancel'));
         }
       } else if (s.type === 'number') {
         const unit = /Mb$/.test(s.key) ? 'MB' : '';

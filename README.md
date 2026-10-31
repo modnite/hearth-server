@@ -1,6 +1,6 @@
 # Hearth server
 
-Self-hosted messaging server for a family, a friend group or a team. Accounts, direct and group chats, voice and video calls, file sharing, end-to-end encrypted rooms, backups kept per person, and a web admin panel. Current version: 1.1.0.
+Self-hosted messaging server for a family, a friend group or a team. Accounts, direct and group chats, voice and video calls, file sharing, end-to-end encrypted rooms, backups kept per person, and a web admin panel. Current version: 1.1.1.
 
 The repository is the server only. Clients use the documented HTTP and WebSocket API ([docs/API.md](docs/API.md)):
 
@@ -130,6 +130,7 @@ Or set `HEARTH_IMAGE` to a published image tag. The database migrates itself. Co
 | 1.0.0 | One-file stack with LiveKit and optional Caddy | Done |
 | 1.0.1 | Admin panel refined: even grids, phone layout as cards, dismiss button | Done |
 | 1.1.0 | Crash reports: ingest route, Crashes page, retention, settings | Done |
+| 1.1.1 | Admin panel: secret settings share one pattern (Set, Replace, Clear) | Done |
 
 ### Open items
 

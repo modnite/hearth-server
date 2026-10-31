@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.1 (30 Oct 2026)
+- Admin panel: a secret that is not set shows "Not set" and a Set button, a secret that is set shows "Set" with Replace and Clear, a pending clear shows "Will be cleared" with Undo. Editing always ends with Cancel. Before, an unset secret was a bare text box.
+
 ## 1.1.0 (30 Oct 2026)
 - Crash reports: `POST /api/crash-reports` (any client, signed in or not, 30 per hour per address), a Crashes page in the admin panel, grouping by signature, mark fixed, notes, copy, delete, automatic pruning, settings `CRASH_REPORTS` and `CRASH_KEEP_DAYS`.
 - `features.crashReports` in `GET /api/server/info`.
