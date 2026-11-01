@@ -8,6 +8,7 @@ import { currentUser, createSession, hashPassword } from './auth.js';
 import { ConfigError, SETTINGS, backupStorageOn, cfg, describeConfig, registrationOpen, sourceOf, updateConfig } from './config.js';
 import { db, now, type UserRow } from './db.js';
 import { deleteGroup, groupDetail, listGroups, openGroupCount, parseReport, pruneReports, setResolved, storeReport } from './crashReports.js';
+import { clusterInfo } from './mirror.js';
 import { env } from './env.js';
 import { pushEnabled } from './push.js';
 import { FailureLimiter } from './ratelimit.js';
@@ -173,6 +174,7 @@ export function registerAdmin(app: FastifyInstance, deps: AdminDeps): void {
       houseKey: cfg('registrationKey').length >= 8,
       setupNeeded: count('SELECT COUNT(*) AS n FROM users') === 0,
       features: { calls: livekitConfigured(), push: pushEnabled(), backups: backupStorageOn(), browser: cfg('browser') !== 'off', twoStep: true, friends: true, crashReports: cfg('crashReports') !== 'off' },
+      cluster: clusterInfo(),
       limits: { backupQuotaMb: Number(cfg('backupQuotaMb')), backupMaxFileMb: Number(cfg('backupMaxFileMb')) },
     };
   });

@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { db, now, type UserRow } from './db.js';
+import { localSessions } from './mirrorSync.js';
 import { purgeNativeNotifications, revokeNativeSession } from './nativeQueue.js';
 
 const SESSION_COOKIE = 'hearth_session';
@@ -30,6 +31,8 @@ export function purgeExpiredSessions(): void {
 
 export function createSession(userId: string, reply: FastifyReply): void {
   const token = crypto.randomBytes(32).toString('hex');
+  if (localSessions.size > 500) localSessions.clear();
+  localSessions.add(token);
   const expires = now() + SESSION_TTL_MS;
   db.prepare('INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').run(
     token,

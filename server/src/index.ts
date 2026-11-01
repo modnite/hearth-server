@@ -12,6 +12,7 @@ import { hashPassword, purgeExpiredSessions } from './auth.js';
 import { db, now } from './db.js';
 import { env } from './env.js';
 import { hub } from './realtime.js';
+import { registerMirror, startMirror } from './mirror.js';
 import { registerRoutes } from './routes.js';
 import { staticCacheHeaders } from './staticCache.js';
 
@@ -29,6 +30,8 @@ await app.register(multipart, { limits: { fileSize: 200 * 1024 * 1024, files: 1 
 app.get('/api/health', async () => ({ ok: true, uptime: process.uptime() }));
 
 const routeList = collectRoutes(app);
+// First, so its guard sees every request: a server that is not the one serving people answers "standby" and the apps move on.
+registerMirror(app);
 registerRoutes(app);
 registerAdmin(app, { routes: routeList });
 hub.attach(app);
@@ -98,6 +101,7 @@ purgeExpiredSessions();
 setInterval(purgeExpiredSessions, 60 * 60_000).unref();
 
 await app.listen({ port: env.PORT, host: '0.0.0.0' });
+startMirror();
 app.log.info(`Hearth ready on port ${env.PORT} (domain ${env.HEARTH_DOMAIN})`);
 
 // Calls live in the media engine, not in our memory: after a restart (a

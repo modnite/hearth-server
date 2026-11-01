@@ -106,6 +106,17 @@ export class Hub {
     info: () => {},
   };
 
+  /** Close every socket, so clients reconnect (to another server of the same group, once this one stops being the main one). */
+  disconnectAll(code: number, reason: string): void {
+    for (const ws of this.clients.keys()) {
+      try {
+        ws.close(code, reason);
+      } catch {
+        /* already closing */
+      }
+    }
+  }
+
   /** Swap the media probe and the monitor (tests inject fakes here). */
   configureHealth(probe: LiveKitProbe, monitor?: CallHealthMonitor): void {
     this.probe = probe;
