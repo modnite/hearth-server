@@ -53,7 +53,7 @@ services:
     depends_on:
       init: { condition: service_completed_successfully }
 
-  # Voice and video. Host networking so it can use the media ports (Linux only). Forward 7881/tcp and 50100-50199/udp on your router.
+  # Voice and video. Host networking so it can use the media ports (Linux only). Forward 7882/udp (all media) and 7881/tcp on your router, or start the "upnp" profile to have it done for you.
   livekit:
     <<: *common
     image: livekit/livekit-server:${LIVEKIT_TAG:-v1.13.11}
@@ -63,6 +63,14 @@ services:
       - hearth_shared:/shared:ro
     depends_on:
       init: { condition: service_completed_successfully }
+
+  # Opens the ports on the router by itself when it offers UPnP: `docker compose --profile upnp up -d`. Off unless asked for.
+  upnp:
+    <<: *common
+    profiles: ["upnp"]
+    image: ${HEARTH_IMAGE:-ghcr.io/modnite/hearth-server:latest}
+    network_mode: host
+    command: ["node", "scripts/upnp.mjs"]
 
   # HTTPS for HEARTH_DOMAIN. Camera and microphone in a browser need it; native apps do not.
   caddy:

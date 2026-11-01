@@ -138,11 +138,22 @@ await check('new messages reach the mirrors by themselves', async () => {
   }
 });
 
+let portable;
+await check('a sign-in can be made to carry over to another server of the group', async () => {
+  const r = await adminA.call('/api/auth/portable', { method: 'POST', body: {} });
+  assert.equal(r.status, 200, r.text);
+  portable = r.json.token;
+  await sleep(2500);
+});
+
 await check('when the main server goes away the first mirror takes over by itself, the second follows it', async () => {
   A.child.kill();
   await until('B to take over', async () => (await info(B)).cluster?.writable === true, 30000);
   const onB = new Client(B.base);
   assert.equal((await onB.call('/api/auth/login', { method: 'POST', body: { username: 'root', password } })).status, 200);
+  const adopted = new Client(B.base);
+  assert.equal((await adopted.call('/api/auth/adopt', { method: 'POST', body: { token: portable } })).status, 200, 'the carried sign-in works on the stand-in');
+  assert.equal((await adopted.call('/api/auth/me')).json.user.username, 'root');
   const sent = await onB.call(`/api/rooms/${roomId}/messages`, { method: 'POST', body: { body: 'while A was away' } });
   assert.equal(sent.status, 200, sent.text);
   assert.equal((await info(C)).cluster.writable, false, 'only one mirror serves');

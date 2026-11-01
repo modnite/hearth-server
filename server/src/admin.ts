@@ -163,7 +163,8 @@ export interface AdminDeps {
 export function registerAdmin(app: FastifyInstance, deps: AdminDeps): void {
   // ---- what any client may ask before anyone is signed in -------------------------------------------------------
   app.get('/api/server/info', async (_req, reply) => {
-    reply.header('cache-control', 'no-store');
+    // Public and harmless: an app on another server of the group reads it to learn whether this one is serving.
+    reply.header('cache-control', 'no-store').header('access-control-allow-origin', '*');
     return {
       software: SOFTWARE,
       version: VERSION,
@@ -172,7 +173,7 @@ export function registerAdmin(app: FastifyInstance, deps: AdminDeps): void {
       motd: cfg('motd'),
       registration: registrationOpen() ? 'open' : 'invite',
       houseKey: cfg('registrationKey').length >= 8,
-      setupNeeded: count('SELECT COUNT(*) AS n FROM users') === 0,
+      setupNeeded: count('SELECT COUNT(*) AS n FROM users') === 0 && !clusterInfo(),
       features: { calls: livekitConfigured(), push: pushEnabled(), backups: backupStorageOn(), browser: cfg('browser') !== 'off', twoStep: true, friends: true, crashReports: cfg('crashReports') !== 'off' },
       cluster: clusterInfo(),
       limits: { backupQuotaMb: Number(cfg('backupQuotaMb')), backupMaxFileMb: Number(cfg('backupMaxFileMb')) },

@@ -4,9 +4,10 @@ import { activity, backups, build, invites } from './v-more.js';
 import { crashes } from './v-crashes.js';
 import { overview } from './v-overview.js';
 import { people } from './v-people.js';
+import { joinDialog, servers } from './v-servers.js';
 import { settings } from './v-settings.js';
 import { icon } from './icons.js';
-import { api, button, h, skeleton, theme } from './ui.js';
+import { api, button, h, pill, skeleton, theme } from './ui.js';
 
 theme.apply();
 
@@ -19,6 +20,7 @@ const TABS = [
   { id: 'people', ico: 'people', label: 'People', group: 'People', view: people, count: 'users' },
   { id: 'invites', ico: 'invites', label: 'Invites', group: 'People', view: invites, count: 'invites' },
   { id: 'backups', ico: 'backups', label: 'Backups', group: 'Operate', view: backups },
+  { id: 'mirrors', ico: 'mirror', label: 'Mirrors', group: 'Operate', view: servers },
   { id: 'crashes', ico: 'bug', label: 'Crashes', group: 'Operate', view: crashes, count: 'crashes' },
   { id: 'activity', ico: 'activity', label: 'Activity', group: 'Operate', view: activity },
   { id: 'build', ico: 'code', label: 'For client builders', group: 'Operate', view: build },
@@ -60,11 +62,21 @@ function gate(setup) {
     h('div', { class: 'field' }, h('label', { class: 'label', for: 'u' }, 'Username'), user),
     h('div', { class: 'field' }, h('label', { class: 'label', for: 'p' }, 'Password'), pass, setup ? strength : null),
     setup ? h('div', { class: 'field' }, h('label', { class: 'label', for: 'p2' }, 'Repeat the password'), again) : null,
-    codeField, msg, submit);
+    codeField, msg, submit, setup ? h('div', { class: 'links' }, button('This server will be a mirror of another one', { small: true, onclick: () => joinDialog(waitForCopy) })) : null);
 
   app.replaceChildren(h('main', { class: 'gate' }, h('div', { class: 'gate-card panel' },
     h('div', { class: 'ph' }, state.info.name), form)));
   user.focus();
+}
+
+/** After linking a new server as a mirror: wait for the first copy of the people to arrive, then carry on. */
+async function waitForCopy() {
+  plainScreen('Copying from the main server', 'This takes a moment. Sign in with an account from the main server when it is done.');
+  for (let i = 0; i < 120; i += 1) {
+    await new Promise((r) => setTimeout(r, 1000));
+    try { const me = await api('/api/server/info'); if (me.cluster) break; } catch { /* keep waiting */ }
+  }
+  await boot();
 }
 
 function plainScreen(title, text, action) {
@@ -96,12 +108,14 @@ function buildShell() {
   content = h('div', { id: 'content', class: 'page' });
   navEl = h('nav', { 'aria-label': 'Sections' }, navLinks());
   sideEl = h('aside', { class: 'side' }, navEl);
+  const roleBadge = h('span', { class: 'role-badge' });
+  api('/api/admin/cluster').then((c) => { if (c.clustered) roleBadge.replaceChildren(pill(c.role === 'mirror' ? (c.writable ? 'Standing in' : 'Mirror') : 'Main', c.writable ? 'good' : '')); }, () => {});
   const themeBtn = h('button', { type: 'button', class: 'btn', title: 'Switch between light and dark', onclick: () => { theme.toggle(); themeBtn.textContent = theme.isDark() ? 'Light' : 'Dark'; } }, theme.isDark() ? 'Light' : 'Dark');
   app.replaceChildren(
     h('a', { class: 'skip', href: '#main', onclick: (e) => { e.preventDefault(); document.getElementById('main').focus(); } }, 'Skip to the content'),
     h('header', { class: 'hdr' },
       h('button', { type: 'button', class: 'btn menu', 'aria-label': 'Menu', onclick: () => sideEl.classList.toggle('open') }, 'Menu'),
-      h('span', { class: 'name' }, state.info.name), h('span', { class: 'ver' }, `v${state.info.version}`),
+      h('span', { class: 'name' }, state.info.name), h('span', { class: 'ver' }, `v${state.info.version}`), roleBadge,
       h('span', { class: 'sp' }), h('span', { class: 'who' }, me.username), themeBtn, h('button', { type: 'button', class: 'btn', onclick: signOut }, 'Sign out')),
     h('div', { class: 'layout' }, sideEl, h('main', { class: 'main', id: 'main', tabindex: '-1' }, content)));
 }

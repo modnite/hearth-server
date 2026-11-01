@@ -29,17 +29,20 @@ export function purgeExpiredSessions(): void {
   db.prepare('DELETE FROM remember_tokens WHERE expires_at <= ?').run(now());
 }
 
-export function createSession(userId: string, reply: FastifyReply): void {
+/** A new sign-in token for a person, stored. */
+export function issueSession(userId: string): string {
   const token = crypto.randomBytes(32).toString('hex');
   if (localSessions.size > 500) localSessions.clear();
   localSessions.add(token);
-  const expires = now() + SESSION_TTL_MS;
-  db.prepare('INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').run(
-    token,
-    userId,
-    now(),
-    expires,
-  );
+  db.prepare('INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').run(token, userId, now(), now() + SESSION_TTL_MS);
+  return token;
+}
+
+export function createSession(userId: string, reply: FastifyReply): void {
+  setSessionCookie(reply, issueSession(userId));
+}
+
+export function setSessionCookie(reply: FastifyReply, token: string): void {
   reply.setCookie(SESSION_COOKIE, token, {
     path: '/',
     httpOnly: true,

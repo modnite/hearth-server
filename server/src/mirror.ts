@@ -6,7 +6,7 @@ import { pipeline } from 'node:stream/promises';
 import zlib from 'node:zlib';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { nanoid } from 'nanoid';
-import { currentUser } from './auth.js';
+import { currentUser, issueSession, setSessionCookie, userFromToken } from './auth.js';
 import { cfg, updateConfig } from './config.js';
 import { db, now } from './db.js';
 import { env } from './env.js';
@@ -721,6 +721,22 @@ export function registerMirror(app: FastifyInstance): void {
     frozen = false;
     save();
     log('handed back', 'the main server has its data again');
+    return { ok: true };
+  });
+
+  // ---- for the apps: carry a sign-in over to another server of the group (the copy of the sessions table is what makes it work there)
+  app.post('/api/auth/portable', async (req, reply) => {
+    const me = currentUser(req);
+    if (!me) return reply.code(401).send({ error: 'unauthorized' });
+    reply.header('cache-control', 'no-store');
+    return { token: issueSession(me.id) };
+  });
+
+  app.post('/api/auth/adopt', async (req, reply) => {
+    const token = String(((req.body ?? {}) as { token?: string }).token ?? '');
+    const user = userFromToken(token);
+    if (!user) return reply.code(401).send({ error: 'that sign-in has ended' });
+    setSessionCookie(reply, token);
     return { ok: true };
   });
 

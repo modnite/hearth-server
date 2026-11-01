@@ -27,7 +27,7 @@ Already have a reverse proxy (nginx, Traefik, Cloudflare Tunnel)? Skip the `tls`
 
 ## 3. Voice and video
 
-LiveKit starts with the stack. Forward `7881/tcp` and `50100-50199/udp` to the machine. Clients are told where to reach it from the address they connected by (`ws://THAT-ADDRESS:7880` over plain HTTP, `wss://THAT-ADDRESS` over HTTPS), so there is nothing to set; set "LiveKit address for clients" in Settings only if media lives somewhere else.
+LiveKit starts with the stack. Forward `7882/udp` (all media goes through this one port) and `7881/tcp` to the machine, or run `docker compose --profile upnp up -d` to have a router that offers UPnP opened for you (the mappings last an hour and are renewed; `UPNP_PORTS` changes what is opened). A range is still possible: give both `LIVEKIT_UDP_RANGE_START` and `LIVEKIT_UDP_RANGE_END`. Clients are told where to reach it from the address they connected by (`ws://THAT-ADDRESS:7880` over plain HTTP, `wss://THAT-ADDRESS` over HTTPS), so there is nothing to set; set "LiveKit address for clients" in Settings only if media lives somewhere else.
 
 The init step looks up this machine's public address over HTTPS (never STUN). If that fails, or the address changes, set `PUBLIC_IP` and run `docker compose up -d` again; without a public address, calls work on the local network only.
 

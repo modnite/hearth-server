@@ -473,3 +473,7 @@ textarea.input { height: auto; min-height: 60px; padding: 8px 12px; resize: vert
 @media (max-width: 640px) {
   table.stack td:first-child, table.stack td:first-child > span { text-align: left; }
 }
+
+.hdr .role-badge { margin-left: 8px; display: inline-flex; }
+.gate-card .links { margin-top: 12px; text-align: center; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; }

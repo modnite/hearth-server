@@ -1,6 +1,6 @@
 # Hearth server
 
-Self-hosted messaging server for a family, a friend group or a team. Accounts, direct and group chats, voice and video calls, file sharing, end-to-end encrypted rooms, backups kept per person, and a web admin panel. Current version: 1.1.1.
+Self-hosted messaging server for a family, a friend group or a team. Accounts, direct and group chats, voice and video calls, file sharing, end-to-end encrypted rooms, backups kept per person, and a web admin panel. Current version: 1.2.0.
 
 The repository is the server only. Clients use the documented HTTP and WebSocket API ([docs/API.md](docs/API.md)):
 
@@ -46,7 +46,9 @@ Services in the file:
 
 The server makes its own session secret on first start. Clients are told where to reach calls from the address they connected by.
 
-**Calls** need `7881/tcp` and `50100-50199/udp` forwarded to the machine.
+**Calls** need `7882/udp` (all media, one port) and `7881/tcp` forwarded to the machine, or start the `upnp` profile to have the router opened for you.
+
+**Mirrors**: any number of other servers can keep a live copy and take over by themselves. See [docs/MIRRORS.md](docs/MIRRORS.md).
 
 **Browsers** need HTTPS for camera and microphone: `HEARTH_DOMAIN=chat.example.com docker compose --profile tls up -d`. Native apps do not.
 
@@ -131,6 +133,7 @@ Or set `HEARTH_IMAGE` to a published image tag. The database migrates itself. Co
 | 1.0.1 | Admin panel refined: even grids, phone layout as cards, dismiss button | Done |
 | 1.1.0 | Crash reports: ingest route, Crashes page, retention, settings | Done |
 | 1.1.1 | Admin panel: secret settings share one pattern (Set, Replace, Clear) | Done |
+| 1.2.0 | Mirrors with automatic failover and handback, one UDP port for calls, opt-in UPnP | Done |
 
 ### Open items
 

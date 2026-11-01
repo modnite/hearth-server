@@ -23,8 +23,13 @@ if (!secret) {
   console.log('[init] made the LiveKit key');
 }
 
-const udpStart = Number(process.env.LIVEKIT_UDP_RANGE_START || 50100);
-const udpEnd = Number(process.env.LIVEKIT_UDP_RANGE_END || 50199);
+// One UDP port for all media, so there is a single thing to forward on a router (many home routers cannot forward a range). A range is used
+// only when both ends are given.
+const udpPort = Number(process.env.LIVEKIT_UDP_PORT || 7882);
+const udpStart = Number(process.env.LIVEKIT_UDP_RANGE_START || 0);
+const udpEnd = Number(process.env.LIVEKIT_UDP_RANGE_END || 0);
+const media = udpStart && udpEnd ? `  port_range_start: ${udpStart}
+  port_range_end: ${udpEnd}` : `  udp_port: ${udpPort}`;
 const tcpPort = Number(process.env.LIVEKIT_TCP_PORT || 7881);
 
 const isIp = (v) => /^(\d{1,3}\.){3}\d{1,3}$/.test(v) || /^[0-9a-fA-F:]+$/.test(v);
@@ -45,8 +50,7 @@ keys:
   hearth: ${secret}
 rtc:
   tcp_port: ${tcpPort}
-  port_range_start: ${udpStart}
-  port_range_end: ${udpEnd}
+${media}
   use_external_ip: false
 ${ip ? `  node_ip: ${ip}\n` : ''}  advertise_internal_ip: true
   use_mdns: false

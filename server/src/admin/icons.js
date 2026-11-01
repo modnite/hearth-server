@@ -12,6 +12,7 @@ const P = {
   browser: '<circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2C6 4 6 12 8 14"/>',
   database: '<ellipse cx="8" cy="4" rx="5" ry="2"/><path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>',
   server: '<rect x="2" y="3" width="12" height="4" rx="1"/><rect x="2" y="9" width="12" height="4" rx="1"/><path d="M4.5 5h.01M4.5 11h.01"/>',
+  mirror: '<rect x="2" y="3" width="5" height="10" rx="1"/><rect x="9" y="3" width="5" height="10" rx="1"/><path d="M7 8h2"/>',
   msg: '<path d="M3 3.5h10a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H8l-3 2.5v-2.5H3a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1z"/>',
   close: '<path d="M4 4l8 8M12 4l-8 8"/>',
   shield: '<path d="M8 1.8l5 2v4.2c0 3-2 5.2-5 6.2-3-1-5-3.2-5-6.2V3.8z"/>',
