@@ -1,6 +1,6 @@
 # Hearth server
 
-Self-hosted messaging server for a family, a friend group or a team. Accounts, direct and group chats, voice and video calls, file sharing, end-to-end encrypted rooms, backups kept per person, and a web admin panel. Current version: 1.2.0.
+Self-hosted messaging server for a family, a friend group or a team. Accounts, direct and group chats, voice and video calls, file sharing, end-to-end encrypted rooms, backups kept per person, and a web admin panel. Current version: 1.2.1.
 
 The repository is the server only. Clients use the documented HTTP and WebSocket API ([docs/API.md](docs/API.md)):
 

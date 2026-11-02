@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1 (1 Nov 2026)
+- A mirror of a server that has no admin flags (an older Hearth main server) makes its oldest account an administrator after copying, so the panel can still be used.
+- The mirror code takes what it needs from the server around it through one small file, so the same code runs on servers without the admin panel.
+
 ## 1.2.0 (1 Nov 2026)
 - Mirrors: any number of other servers keep a live copy (database and files) and take over by themselves when the main server stops answering, then hand back by themselves when it returns. The Mirrors page links a mirror with a one-time code. A mirror can be made the main server for good. See docs/MIRRORS.md.
 - `GET /api/server/info` carries `cluster` (round, whether this server is serving, the addresses of the group) so apps can move between servers; `POST /api/auth/portable` and `POST /api/auth/adopt` carry a sign-in to another server of the group.

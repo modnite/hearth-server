@@ -6,16 +6,21 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { applySnapshot, diffFiles, exportSnapshot, safePath } from './mirrorSync.js';
 
 const dirs: string[] = [];
+const opened: Database.Database[] = [];
 const tmp = (): string => {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hearth-sync-'));
   dirs.push(d);
   return d;
 };
-afterEach(() => { for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true }); });
+afterEach(() => {
+  for (const d of opened.splice(0)) d.close();
+  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+});
 
 function open(dir: string, name: string): Database.Database {
   const db = new Database(path.join(dir, name));
-  db.exec('CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT NOT NULL, extra TEXT NOT NULL DEFAULT "x"); CREATE TABLE sessions (token TEXT PRIMARY KEY, user_id TEXT);');
+  opened.push(db);
+  db.exec("CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT NOT NULL, extra TEXT NOT NULL DEFAULT 'x'); CREATE TABLE sessions (token TEXT PRIMARY KEY, user_id TEXT);");
   return db;
 }
 
@@ -49,7 +54,8 @@ describe('copying a database', () => {
     const dir = tmp();
     const main = open(dir, 'main.db');
     const other = new Database(path.join(dir, 'other.db'));
-    other.exec('CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT NOT NULL); INSERT INTO users VALUES ("a", "Alice");');
+    opened.push(other);
+    other.exec("CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT NOT NULL); INSERT INTO users VALUES ('a', 'Alice');");
     exportSnapshot(other, path.join(dir, 'snap.db'));
     applySnapshot(main, path.join(dir, 'snap.db'));
     expect(main.prepare('SELECT id, name, extra FROM users').all()).toEqual([{ id: 'a', name: 'Alice', extra: 'x' }]);

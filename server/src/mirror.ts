@@ -7,11 +7,11 @@ import zlib from 'node:zlib';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { nanoid } from 'nanoid';
 import { currentUser, issueSession, setSessionCookie, userFromToken } from './auth.js';
-import { cfg, updateConfig } from './config.js';
 import { db, now } from './db.js';
 import { env } from './env.js';
 import { decide, type Action, type PeerView } from './mirrorLogic.js';
 import { applySnapshot, changeCount, diffFiles, exportSnapshot, listFiles, localSessions, pruneOld, safePath, storeFile, type RemoteFile } from './mirrorSync.js';
+import { afterCopy, applySharedSettings, infoBody, isClusterAdmin, logLine, registerHostRoutes, serveInfo, serverName, sharedSettings } from './mirrorHost.js';
 import { hub } from './realtime.js';
 
 /**
@@ -34,7 +34,6 @@ import { hub } from './realtime.js';
 const FAILOVER_MS = Number(process.env.MIRROR_FAILOVER_SECONDS || 30) * 1000;
 const TICK_MS = Number(process.env.MIRROR_TICK_SECONDS || 5) * 1000;
 const PEER_TIMEOUT_MS = 3000;
-const SHARED_SETTINGS = ['serverName', 'motd', 'registration', 'registrationKey', 'backupStorage', 'backupQuotaMb', 'backupMaxFileMb', 'browser', 'crashReports', 'crashKeepDays'];
 
 export interface Node {
   id: string;
@@ -137,12 +136,6 @@ export function isWritable(): boolean {
 const selfNode = (): Node => saved.nodes.find((n) => n.id === saved.nodeId) ?? { id: saved.nodeId, name: saved.name, url: saved.selfUrl, rank: saved.role === 'primary' ? 0 : 99 };
 const fingerprint = (): string => `${bootId}:${changeCount(db)}`;
 
-function sharedSettings(): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const k of SHARED_SETTINGS) out[k] = cfg(k);
-  return out;
-}
-
 function stateView(): PeerState {
   return {
     nodeId: saved.nodeId,
@@ -158,7 +151,7 @@ function stateView(): PeerState {
 
 function log(action: string, detail = ''): void {
   try {
-    db.prepare('INSERT INTO admin_log (at, who, action, detail) VALUES (?, ?, ?, ?)').run(now(), 'servers', action, detail.slice(0, 300));
+    logLine(action, detail);
   } catch {
     /* the log table is not there yet, or this is a standby; the console still has it */
   }
@@ -248,6 +241,11 @@ async function pullAll(node: Node, st: PeerState, opts: { prune: boolean }): Pro
       saved.needBackup = false;
     }
     const r = applySnapshot(db, tmp, localSessions);
+    try {
+      afterCopy(db);
+    } catch {
+      /* a server without admin flags has nothing to repair */
+    }
     log('copied', `${r.rows} rows from ${node.name || node.url}`);
   } finally {
     fs.rmSync(tmp, { force: true });
@@ -259,12 +257,8 @@ async function pullAll(node: Node, st: PeerState, opts: { prune: boolean }): Pro
 }
 
 function applySettings(settings: Record<string, string> | undefined): void {
-  if (!settings) return;
-  const changes: Record<string, string> = {};
-  for (const k of SHARED_SETTINGS) if (typeof settings[k] === 'string' && settings[k] !== cfg(k)) changes[k] = settings[k]!;
-  if (Object.keys(changes).length === 0) return;
   try {
-    updateConfig(changes);
+    applySharedSettings(settings);
   } catch (e) {
     log('settings not copied', String(e));
   }
@@ -446,7 +440,7 @@ export function startMirror(): void {
   const code = process.env.HEARTH_MIRROR_CODE;
   if (code && saved.role === 'primary' && saved.nodes.length === 0) {
     const url = process.env.HEARTH_PUBLIC_URL || (env.HEARTH_DOMAIN !== 'localhost' ? `https://${env.HEARTH_DOMAIN}` : '');
-    void joinGroup(code, cfg('serverName'), url).then(
+    void joinGroup(code, serverName(), url).then(
       () => log('linked', 'from HEARTH_MIRROR_CODE'),
       (e) => log('could not link', String(e)),
     );
@@ -464,7 +458,7 @@ const CODE_PREFIX = 'hm1.';
 export function makeCode(origin: string, label: string): { code: string; id: string } {
   if (!saved.key) saved.key = crypto.randomBytes(32).toString('hex');
   if (!saved.selfUrl) saved.selfUrl = origin.replace(/\/+$/, '');
-  if (!saved.name) saved.name = cfg('serverName');
+  if (!saved.name) saved.name = serverName();
   if (saved.nodes.length === 0) saved.nodes = [{ id: saved.nodeId, name: saved.name, url: saved.selfUrl, rank: 0 }];
   const rank = Math.max(0, ...saved.nodes.map((n) => n.rank), ...saved.pending.map((p) => p.rank)) + 1;
   const id = nanoid(10);
@@ -566,7 +560,7 @@ export function clusterStatus() {
     epoch: saved.epoch,
     nodeId: saved.nodeId,
     primaryId: saved.primaryId,
-    name: saved.name || cfg('serverName'),
+    name: saved.name || serverName(),
     selfUrl: saved.selfUrl,
     clustered: clustered(),
     lastSync: saved.lastSync,
@@ -616,6 +610,13 @@ function sameOrigin(req: FastifyRequest): boolean {
 const STANDBY_OK = ['/api/health', '/api/server/info', '/api/mirror/', '/api/auth/login', '/api/auth/logout', '/api/auth/me'];
 
 export function registerMirror(app: FastifyInstance): void {
+  registerHostRoutes(app);
+  if (serveInfo) {
+    app.get('/api/server/info', async (_req, reply) => {
+      reply.header('cache-control', 'no-store').header('access-control-allow-origin', '*');
+      return { ...infoBody(), cluster: clusterInfo() };
+    });
+  }
   app.addHook('onRequest', async (req, reply) => {
     if (isWritable()) return;
     const url = req.url.split('?')[0]!;
@@ -639,7 +640,7 @@ export function registerMirror(app: FastifyInstance): void {
       void reply.code(401).send({ error: 'unauthorized' });
       return false;
     }
-    if (!me.is_admin) {
+    if (!isClusterAdmin(me)) {
       void reply.code(403).send({ error: 'this needs an administrator' });
       return false;
     }
@@ -762,7 +763,7 @@ export function registerMirror(app: FastifyInstance): void {
     if (clustered()) return reply.code(409).send({ error: 'this server is already in a group' });
     const b = (req.body ?? {}) as { code?: string; name?: string; origin?: string };
     try {
-      await joinGroup(String(b.code ?? '').trim(), String(b.name || cfg('serverName')).slice(0, 60), String(b.origin ?? ''));
+      await joinGroup(String(b.code ?? '').trim(), String(b.name || serverName()).slice(0, 60), String(b.origin ?? ''));
     } catch (e) {
       return reply.code(400).send({ error: (e as Error).message });
     }
